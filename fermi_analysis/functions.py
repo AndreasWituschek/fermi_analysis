@@ -7,9 +7,6 @@ Created on Wed Feb 13 13:22:02 2019
 import numpy as np
 import matplotlib.pyplot as plt
 
-def hello():
-    print('hello')
-
 def importFile(path):
     with open(path, 'r') as document:
         data = {}
@@ -34,10 +31,28 @@ def plotCurve(X,Y,plotRange):
     plt.xlabel('Delay [fs]')
     plt.ylabel('Amplitude [V]')
 
-def plotData(data):
+def plotTdData(data):
     #plot data points
-    plt.errorbar(data['Delay'],data['mx'], yerr=data['sx'],color='r',linestyle='')
+    plt.errorbar(data['Delay'],data['mx'], yerr=data['sx'],color='b',linestyle='')
     plt.plot(data['Delay'],data['mx'],'bo')
-    plt.errorbar(data['Delay'],data['my'], yerr=data['sy'],color='b',linestyle='')
+    plt.errorbar(data['Delay'],data['my'], yerr=data['sy'],color='r',linestyle='')
     plt.plot(data['Delay'],data['my'],'ro')
     
+def plotFdCurve(stop,start,cdft,fDown):
+    plt.figure()
+    plt.plot([i* 10**3./((stop-start)) for i in range(len(cdft))],abs(cdft),linestyle='--')
+    plt.xlim([0,200])
+    plt.axvline(x=fDown, color='black', linestyle='--')
+    plt.xlabel('Downshifted quantum interference frequency [THz]')
+    plt.ylabel('Intensity [a.U.]')
+
+def plotFdCurveEV(stop,start,cdft,fDown,l_ref,l_He,h):
+    transition=299.8/l_He*4.135 #helium transition energy
+    plt.figure()
+    plt.plot([(i* 1/((stop-start))+h*299.8/l_ref)*4.135 for i in range(len(cdft))],abs(cdft),linestyle='--')
+    plt.xlim([20,28])
+    plt.axvline(x=transition, color='black', linestyle='--')
+    plt.text(transition+0.1,0.8*max(abs(cdft)),'He 4P',rotation=0)
+    plt.xlabel('Energy [eV]')
+    plt.ylabel('Intensity [a.U.]')
+ 
