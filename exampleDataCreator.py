@@ -21,18 +21,17 @@ A = 1. #amplitude (=R from MFLI)
 
 
 #scan parameters
-step=3 #delay stepsize in fs
+step=4 #delay stepsize in fs
 start=70 #delay scan start in fs
-stop= 570 #delay scans stop in fs
+stop=500  #delay scans stop in fs
 delay=np.arange(start,stop,step) #delay points in fs
 n=len(delay) #number of time domain data points
 run=np.array(range(1,n+1)) # incrementing run number at each delay step
 
-#ideal data:
-mx,my= fk.curve(l_He,l_ref,h,phi,A,delay)
-#adding 50% noise on data
-for m in [mx,my]:
-    m = (np.random.rand(n)*1.5+1)*m
+#creating theoretical curve:
+aNoise=0.*A #amplitude noise in units of the "correct" amplitude
+pNoise= 20./180*np.pi #phase noise in rad, both for X and Y
+mx,my= fk.curveCreator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
 
 #error bars
 s=0.05 #5% error on all data points
@@ -59,4 +58,4 @@ df.to_csv("exampleData.csv")
 #for key in data:
 #    print key
 #    
-plt.plot(data['mx'])
+plt.plot(d['mx'])
