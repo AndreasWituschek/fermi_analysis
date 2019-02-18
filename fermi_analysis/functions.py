@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #physical constants:
-c=299.792458 #speed of light
+c=299.792458 #speed of light in nm/fs
 hPlanck=4.135667662 #plancks constant in 10e-15 eV/s
 
 def importFile(path):

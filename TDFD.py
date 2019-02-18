@@ -30,19 +30,20 @@ h = 5. #harmonic of FEL
 phi = 0. #phase offset between reference and signal in degrees
 A = 1. #amplitude (=R from MFLI)
 
-start=min(data['Delay'])
-stop=max(data['Delay'])
-length=len(data['Delay'])
-
 """Plotting parameters"""
 points=20000 # number of TD points for plotting of theroetical curve 
-downshifted= True #plot downshifted spectrum
+downshifted= False #plot downshifted spectrum
 absolute=True #plot absorption spectrum
 absorptive=False #plot absorptive and dispersive spectrum
 
 
 """TD Analysis & Plotting"""
 """"""""""""""""""
+#delay parameters
+start=min(data['Delay'])
+stop=max(data['Delay'])
+length=len(data['Delay'])
+
 #calculation of theoretical curve
 Xtd,Ytd,X,Y=fk.curve(l_He,l_ref,h,phi,A,start, stop, points, length) #Xtd/Ytd is time domain data, where 10fs are added/substracted to start/stop of dataset, so one can see where next datapoint should lie
 #plot in phase and in quadrature components of theoretical curve and of data
@@ -60,9 +61,8 @@ cdft=np.fft.fft(Z)
 Z_d = np.asarray(data['mx'])+ 1j*np.asarray(data['my'])
 cdft_d=np.fft.fft(Z_d)
 
-#plotting FD results. Maximum value of theoretical curve is scaled to maximum of experimental data.
+#### plotting FD results. Maximum value of theoretical curve is scaled to maximum of experimental data.
 #plot downshifted frequency spectrum
-
 if downshifted: 
     fk.plotFdCurve(stop,start,cdft,cdft_d,l_ref,l_He,h)
 

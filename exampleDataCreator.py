@@ -9,7 +9,6 @@ Created on Thu Feb 14 11:09:30 2019
 import pandas as pd
 import numpy as np
 import fermi_analysis.functions as fk
-import matplotlib.pyplot as plt
 
 
 #parameters for theoretical curve
@@ -23,39 +22,26 @@ A = 1. #amplitude (=R from MFLI)
 #scan parameters
 step=4 #delay stepsize in fs
 start=70 #delay scan start in fs
-stop=500  #delay scans stop in fs
+stop=100  #delay scans stop in fs
 delay=np.arange(start,stop,step) #delay points in fs
 n=len(delay) #number of time domain data points
-run=np.array(range(1,n+1)) # incrementing run number at each delay step
 
-#creating theoretical curve:
-aNoise=0.*A #amplitude noise in units of the "correct" amplitude
-pNoise= 20./180*np.pi #phase noise in rad, both for X and Y
+
+#creating theoretical curve and adding phase and amplitude noise:
+aNoise=0.2*A #amplitude noise in units of the "correct" amplitude
+pNoise= 20. #phase noise in degree, both for X and Y
+pNoise= pNoise/180*np.pi
 mx,my= fk.curveCreator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
 
+# incrementing run number at each delay step
+run=np.array(range(1,n+1)) 
 #error bars
 s=0.05 #5% error on all data points
 sx, sy = np.full(n,s), np.full(n,s)
 
-#background runs:
-b=np.round(np.random.rand(n),0)
 
 #write all data in dictionary:
-d = {'Run': run, 'Delay': delay,'mx': mx,'my': my, 'sx': sx, 'sy': sy, 'Background': b}
+d = {'Run': run, 'Delay': delay,'mx': mx,'my': my, 'sx': sx, 'sy': sy}
 df = pd.DataFrame.from_dict(d)
 #Create a CSV file:
 df.to_csv("exampleData.csv")
-
-##Read the CSV file back as a DataFrame:
-#
-#df = pd.read_csv("exampleData.csv", index_col=0)
-#
-##Convert the DataFrame back to the original dictionary format:
-#
-#data = df.to_dict("list")
-#
-#
-#for key in data:
-#    print key
-#    
-plt.plot(d['mx'])
