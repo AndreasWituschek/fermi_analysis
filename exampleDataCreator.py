@@ -22,7 +22,7 @@ A = 1. #amplitude (=R from MFLI)
 #scan parameters
 step=4 #delay stepsize in fs
 start=70 #delay scan start in fs
-stop=100  #delay scans stop in fs
+stop=1  #delay scans stop in fs
 delay=np.arange(start,stop,step) #delay points in fs
 n=len(delay) #number of time domain data points
 

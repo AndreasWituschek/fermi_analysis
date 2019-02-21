@@ -113,4 +113,34 @@ def plotFdCurveEV(stop,start,cdft,cdft_d,l_ref,l_He,h):
     plt.legend()
     plt.title("Absorptive and dispersive spectra")
 
- 
+def ReadMfliData(bunches): #bunches= number of shots in one file
+    "reads data from files created with mfli.py containing the raw demodulated data. ONLY DUMMY TO CREATE SOME DATA RIGHT NOW"
+    X = [np.random.rand(bunches) for i in np.arange(0,4)] #demodulated X data for each bunch
+    Y = [np.random.rand(bunches) for i in np.arange(0,4)] #demodulated Y data for each bunch
+    modfreq= 1000+np.random.rand(bunches) # modulation frequency for each bunch in Hz
+    run= 1 # run number
+    timestamp = 10 # timestamp of first bunch in this run
+    bunchnumber = 3 #bunchnumber of first bunch in this run
+    mfli_data = {'run': run, 
+                 'bunchnumber': bunchnumber,
+                 'timestamp': timestamp, 
+                 'modfreq': modfreq,
+                 'X': X, 
+                 'Y': Y,} #write all into one dictionary
+    return mfli_data
+    
+def AveragingMfliData(mfli_data,I0,apply_filter,I0_threshold,modfreq_set,modfreq_threshold):
+    b = [a and b for a, b in zip([i>I0_threshold for i in I0], [-modfreq_threshold < i-modfreq_set < modfreq_threshold for i in mfli_data['modfreq']]) ] #boolean for filtering of I0 and modfreq
+    if apply_filter:
+        mX= [np.mean(mfli_data['X'][i][np.where(b)]) for i in range(len(mfli_data['X']))]
+        mY= [np.mean(mfli_data['Y'][i][np.where(b)]) for i in range(len(mfli_data['Y']))]
+        sX= [np.std(mfli_data['X'][i][np.where(b)]) for i in range(len(mfli_data['X']))]
+        sY= [np.std(mfli_data['Y'][i][np.where(b)]) for i in range(len(mfli_data['Y']))]
+    else: 
+        mX= [np.mean(mfli_data['X'][i]) for i in range(len(mfli_data['X']))]
+        mY= [np.mean(mfli_data['Y'][i]) for i in range(len(mfli_data['Y']))]
+        sX= [np.std(mfli_data['X'][i]) for i in range(len(mfli_data['X']))]
+        sY= [np.std(mfli_data['Y'][i]) for i in range(len(mfli_data['Y']))]
+    return mX,mY,sX,sY
+
+         
