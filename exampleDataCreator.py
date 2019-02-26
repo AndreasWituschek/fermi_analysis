@@ -31,7 +31,7 @@ n=len(delay) #number of time domain data points
 aNoise=0.2*A #amplitude noise in units of the "correct" amplitude
 pNoise= 20. #phase noise in degree, both for X and Y
 pNoise= pNoise/180*np.pi
-mx,my= fk.curveCreator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
+mx,my= fk.CurveCreator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
 
 # incrementing run number at each delay step
 run=np.array(range(1,n+1)) 
@@ -41,7 +41,7 @@ sx, sy = np.full(n,s), np.full(n,s)
 
 
 #write all data in dictionary:
-d = {'Run': run, 'Delay': delay,'mx': mx,'my': my, 'sx': sx, 'sy': sy}
+d = {'run': run, 'delay': delay,'mX': mx,'mY': my, 'sX': sx, 'sY': sy}
 df = pd.DataFrame.from_dict(d)
 #Create a CSV file:
 df.to_csv("exampleData.csv")
