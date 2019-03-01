@@ -31,7 +31,7 @@ n=len(delay) #number of time domain data points
 aNoise=0.2*A #amplitude noise in units of the "correct" amplitude
 pNoise= 20. #phase noise in degree, both for X and Y
 pNoise= pNoise/180*np.pi
-mx,my= fk.CurveCreator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
+mx,my= fk.curve_creator(l_He,l_ref,h,phi,A,delay, pNoise, aNoise)
 
 # incrementing run number at each delay step
 run=np.array(range(1,n+1)) 
