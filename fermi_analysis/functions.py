@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import pandas as pd
+import h5py
 
 #physical constants:
 c=299.792458 #speed of light in nm/fs
@@ -117,7 +118,7 @@ def PlotFdCurveEV(stop,start,cdft,cdft_d,l_ref,l_He,h):
     plt.legend()
     plt.title("Absorptive and dispersive spectra")
 
-def ReadMfliData(mfli_file_path,bunches): #bunches= number of shots in one file
+def ReadMfliData_fake(mfli_file_path,bunches): #bunches= number of shots in one file
     "reads data from files created with mfli.py containing the raw demodulated data. ONLY DUMMY TO CREATE SOME DATA RIGHT NOW"
     X = [np.random.rand(bunches) for i in np.arange(0,4)] #demodulated X data for each bunch
     Y = [np.random.rand(bunches) for i in np.arange(0,4)] #demodulated Y data for each bunch
@@ -131,6 +132,18 @@ def ReadMfliData(mfli_file_path,bunches): #bunches= number of shots in one file
                  'modfreq': modfreq,
                  'X': X, 
                  'Y': Y,} #write all into one dictionary
+    return mfli_data
+
+def ReadMfliData(mfli_file_path): #bunches= number of shots in one file
+    """ reads data from files created with mfli.py containing the raw
+        demodulated data.
+    """
+    h5f = h5py.File(mfli_file_path, 'r')
+    # Create dict with:
+    mfli_data = {}
+    for key in h5f.keys():
+        mfli_data.update({key: np.array(h5f[key])})
+    h5f.close()
     return mfli_data
     
 def AveragingMfliData(mfli_data,I0,apply_filter,I0_threshold,modfreq_set,modfreq_threshold,ignore):

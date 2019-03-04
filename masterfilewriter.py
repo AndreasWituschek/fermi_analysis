@@ -29,7 +29,7 @@ delay_pos = np.array(ldm_data['user_laser']['delay_line']['position']) #position
 bunches= len(I0) # number of bunches per file
 
 #importing MFLI data:
-mfli_data = fk.ReadMfliData(mfli_file_path,bunches)
+mfli_data = fk.ReadMfliData_fake(mfli_file_path,bunches)
 
 ''' Data filtering '''
 apply_filter = True #choose wether to apply following filters:
