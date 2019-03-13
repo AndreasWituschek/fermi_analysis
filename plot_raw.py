@@ -17,7 +17,7 @@ import os
 """Experimental Parameters"""
 # parameters for theoretical curve
 l_He = 52.22  # helium 1s-4p transition in nm
-l_ref = 266.  # reference laser wavelenght in nm
+l_ref = 265.98  # reference laser wavelenght in nm
 harmonic = 5.  # harmonic of FEL
 delay_zero_pos = 11025.66
 mfli_name = ['DEV3265', 'DEV3269']  # MFLI device number
