@@ -50,20 +50,9 @@ for run_folder in sorted(os.listdir(root_file_path))[26:]:
     """ Experimental parameters """
     run = int(run_folder[-4:])
     mfli_root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_5/Run_{:03}/work/'.format(run)
-    #delays = [50, -450]
-    #demod_harmonic = ['5_0', '5_1', '5_2', '9_0', '9_1', '9_2']
-    #demod_harmonic = ['5_1']
+
     demod = ['0', '1', '2']
     device = ['DEV3265', 'DEV3269']
-    #assignment = {
-    #    'DEV3265': {
-    #        '0': '4H',
-    #        '1': '5H',
-    #        '2': '10H',},
-    #    'DEV3269': {
-    #        '0': '1H',
-    #        '1': '2H',
-    #        '2': '3H',}}
 
     ''' laser spectrum '''
     l_file_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_5/Run_{:03}/rawdata/'.format(run)
