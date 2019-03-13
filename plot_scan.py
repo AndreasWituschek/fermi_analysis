@@ -16,6 +16,7 @@ import fermi_analysis.functions as fk
 import h5py
 import matplotlib.pyplot as plt
 import scipy.constants as spc
+import os
 
 
 """Experimental Parameters"""
@@ -51,21 +52,22 @@ FWHM = 100
 zeroPaddingFactor = 2
 
 """ Experimental parameters """
-run = 1453
+run = 1367
+mfli_root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_4/Run_{:03}/work/'.format(run)
 #delays = [50, -450]
 #demod_harmonic = ['5_0', '5_1', '5_2', '9_0', '9_1', '9_2']
 #demod_harmonic = ['5_1']
 demod = ['0', '1', '2']
 device = ['DEV3265', 'DEV3269']
-assignment = {
-    'DEV3265': {
-        '0': '4H',
-        '1': '5H',
-        '2': '10H',},
-    'DEV3269': {
-        '0': '1H',
-        '1': '2H',
-        '2': '3H',}}
+#assignment = {
+#    'DEV3265': {
+#        '0': '4H',
+#        '1': '5H',
+#        '2': '10H',},
+#    'DEV3269': {
+#        '0': '1H',
+#        '1': '2H',
+#        '2': '3H',}}
 
 file_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/results/HeDroplet/scan_{0}/'.format(int(run))
 h5f = h5py.File(file_path + 'scan_{0}.h5'.format(int(run)), 'r')
@@ -107,7 +109,14 @@ data = {
 T = data['delay']
 
 for dev in device:
+    print(dev)
+    mfli_file_path = mfli_root_path + dev + '/'
+    mfli_file = h5py.File(mfli_file_path + os.listdir(mfli_file_path)[0], 'r')
+    mfli_harmonic = np.array(mfli_file['harmonic'])
+    print(mfli_harmonic)
+    mfli_file.close()
     for d in demod:
+        i = str(mfli_harmonic[int(d)]) + 'H'
         Z = data[dev]['x' + d] + 1j * data[dev]['y' + d]
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
 
@@ -120,9 +129,9 @@ for dev in device:
         Xtd,Ytd,Xt,Yt = fk.Curve(l_He, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
 
         # Optimal phase
-        Phi_theo = T * 1e-6 * (spc.c/l_ref * harmonic - spc.c/l_He) * 360.0
-        Phi_theo -= (Phi_theo[0]- Phi[0])
-        Phi -= Phi_theo
+#        Phi_theo = T * 1e-6 * (spc.c/l_ref * harmonic - spc.c/l_He) * 360.0
+#        Phi_theo -= (Phi_theo[0]- Phi[0])
+#        Phi -= Phi_theo
 
         delay = T
         X = Z.real
@@ -143,21 +152,21 @@ for dev in device:
         Zg = fk.GaussWindow(T_d, Z, False)
         Td = T[1]-T[0]
         wn, dft = fk.DFT(T_d, Zg, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
-#        FWHM , peakFullWidth = fk.PeakWidth(T, 0.1, False, zeroPaddingFactor)
-#        FWHM = FWHM
-#        print(FWHM)
+        FWHM , peakFullWidth = fk.PeakWidth(T, 0.1, False, zeroPaddingFactor)
+        FWHM = FWHM
+        print(FWHM)
 
 
         # Plot time domain
-        figTD = plt.figure('scan_{0}_TD_{1}.png'.format(run, assignment[dev][d]))
-        ax = figTD.add_subplot(411)
-        ax.set_title('scan_{0}_TD_{1}'.format(run, assignment[dev][d]))
+        figTD = plt.figure('scan_{0}_{1}_TD_{2}'.format(run, dev, i), figsize=(9, 12))
+        ax = figTD.add_subplot(511)
+        ax.set_title('scan_{0}_{1}_TD_{2}'.format(run, dev, i))
 
         ax.errorbar(delay, X, yerr=X_s, color='b', linestyle='')
         ax.plot(delay, X, 'b-')
         ax.grid()
     #    ax.plot(Ttheo, Xt, 'k-')
-        ax = figTD.add_subplot(412)
+        ax = figTD.add_subplot(512)
         ax.errorbar(delay, Y, yerr=Y_s, color=color, linestyle='')
         ax.plot(delay, Y, '-', color=color)
         #ax.plot(Ttheo, -Yt, '-', color=color)
@@ -165,33 +174,44 @@ for dev in device:
         ax.grid()
         ##ax.set_xlim(T[0]+1,T[-1]-1)
 
-        ax = figTD.add_subplot(413)
+        ax = figTD.add_subplot(513)
         ax.errorbar(delay, R, yerr=R_s, color=color, linestyle='')
         ax.plot(delay, R, '-', color=color)
         ax.set_ylabel('R')
         ax.grid()
         #ax.set_xlim(T[0],T[-1])
 
-        ax = figTD.add_subplot(414)
+        ax = figTD.add_subplot(514)
         #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
         ax.plot(delay, Phi, '-', color=color)
         ax.set_ylabel('Phi')
         ax.set_xlabel('Delay in fs')
         ax.grid()
 #        ax.set_xlim(T[0], T[-1])
+        
+        ax = figTD.add_subplot(515)
+        #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
+        ax.plot(delay, np.append(np.diff(delay)[0], np.diff(delay)), '-', color=color)
+        ax.set_ylabel('step sizes')
+        ax.set_xlabel('Delay in fs')
+        ax.set_ylim(0,3)        
+        ax.grid()
+        
+#        ax.set_xlim(T[0], T[-1])      
+        
         plt.tight_layout()
-        plt.savefig(file_path + 'scan_{0}_TD_{1}.png'.format(run, assignment[dev][d]), dpi=400)
-#        plt.close()
+        plt.savefig(file_path + 'scan_{0}_{1}_TD_{2}.png'.format(run, dev, i), dpi=400)
+        plt.close()
 
 
         # plot frequency domain
-        figFT = plt.figure('scan_{0}_FD_{1}.png'.format(run, assignment[dev][d]))
+        figFT = plt.figure('scan_{0}_{1}_FD_{2}'.format(run, dev, i))
         axs = figFT.add_subplot(111)
         axs.plot(wn, abs(dft), '-', color=color, linewidth = 2)
         axs.plot(points,spectrum*(max(abs(dft))-min(abs(dft)))+min(abs(dft)),'-',color='grey',linewidth = 2)
         axs.set_xlabel(r'wavenumber [cm$^{-1}$]', fontsize=14)
         axs.set_ylabel('spectral amp. [arb. u.]', fontsize=14)
-        axs.set_title('scan_{0}_FD_{1}'.format(run, assignment[dev][d]))
+        axs.set_title('scan_{0}_{1}_FD_{2}'.format(run, dev, i))
         axs.set_xlim(180000.,195000.)
         axs.axvline(1E7/l_He,color = 'k' ,linestyle='-', linewidth= 2)
         axs.axvline(harmonic*1E7/l_ref,color = 'k',linestyle='--', linewidth= 2)
@@ -200,8 +220,8 @@ for dev in device:
         axs.axhline(y= plot_y_range * 0.9 + axs.get_ylim()[0], xmin=0.1, xmax=0.1 + FWHM / plot_x_range, linewidth=3)
 #        axs.text(0.1, plot_y_range * 0.9, str(FWHM))
         axs.grid()
-        plt.savefig(file_path + 'scan_{0}_FD_{1}.png'.format(run, assignment[dev][d]), dpi=400)
-#        plt.close()
+        plt.savefig(file_path + 'scan_{0}_{1}_FD_{2}.png'.format(run, dev, i), dpi=400)
+        plt.close()
 
         #np.savefig(figFT, dpi=600)
 

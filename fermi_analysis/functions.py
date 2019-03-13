@@ -10,6 +10,7 @@ import sys
 #import pandas as pd
 import scipy as sp
 import scipy.constants as spc
+from scipy import optimize
 from scipy import fftpack
 import h5py
 
@@ -273,7 +274,6 @@ def DFT(T, Z, dT, l_ref, harmonic, zeroPaddingFactor):
     cified by input factor. Establishes correct monotonoic order of frequency
     axis. Returns wavenumber array and complex valued DFT.
     """
-    print(np.diff(T))
     step = dT
     wn_Mono = 10**7/l_ref
     # determine zero padding
@@ -336,3 +336,147 @@ def plot_spectrogram(fig, wn_lim, t_lim):
 
     #annotate()
     plotbar()
+
+def PeakWidth(T, peakMargin, suscept, zeroPaddingFactor):
+    """
+    Calculates the FWHM of spectral peaks as well as the full width at which
+    spectral peaks will be dropped to peakMargin (fraction of peak maximum)
+    of their amplitude. For this purpose a simulated perfect cosine signal is
+    Fourier transformed with Gaußian window and zero padding and its FWHM and
+    peak margin (peakWidth) is measured and returned.
+    """
+    # simulate perferct cosine signal
+    length = abs(T[-1]-T[0]) # in fs
+    step = length/(len(T)-1)
+    w = 2*np.pi*1/(20*step)   # choose frequency factor 10 below nyquist
+#    paras = {'Schrittweite' : step, 'Monochromator Wavenumber' : 0 }
+    sim = np.exp(1j*w*T)    # define simulated signal as in-phase + 1j*in-quad
+    sim = GaussWindow(T, sim, suscept)
+    wn, dft = DFT(T, sim, step, 1, 1, zeroPaddingFactor)
+    if suscept:
+        dft = dft.real
+    else:
+        dft = abs(dft)
+    # normalize dft to 1
+    dft /= dft.max()
+    wnFitted, fFitted, fitParas = PeakFit("simulation", 1.0, wn, dft, np.abs(wn[-1]-wn[0]), 0.)
+
+    # determine peak width of simulated signal
+    peakFullWidth = abs(wn[findPeakIndexes(dft, peakMargin)[1]]-wn[findPeakIndexes(dft, peakMargin)[2]])
+#    FWHM = abs(wn[findPeakIndexes(dft, 0.5)[1]]-wn[findPeakIndexes(dft, 0.5)[2]])
+    # calculate widths from theoretical derivation of gaussian window width
+#    delta = length*np.sqrt(np.log(2)/3)
+#    FWHM = 8.0*np.log(2.0)/delta# FWHM of Gaussian Window
+#    peakFullWidth = 4*np.sqrt(-np.log(2)*np.log(peakMargin))/delta
+    return fitParas['FWHM'], peakFullWidth
+
+def findPeakIndexes(Y, peakMargin):
+    """
+    Returns index of peak maximum, left and right index where dropped to
+    fraction defined by peakMargin.
+    """
+    indexMax = np.argmax(abs(Y))    # find peak maximum
+    indexLow = np.argmin(abs(Y[:indexMax+1]-peakMargin*Y.max())) # search index in first half of peak
+    indexHigh = np.argmin(abs(Y[indexMax:]-peakMargin*Y.max())) + indexMax # search in second half of peak
+    return  indexMax, indexLow, indexHigh
+
+def PeakFit(peakName, peakWaveNo, wn, spectrum, windowLength, guessNoise):
+    """
+    Performes a gaussian fit of a spectral peak with no constant offset.
+    windowLength : full width of fit window, usually windowLength=x*PeakWidth(T)
+    spectrum : should be ABSOLUTE value of spectrum
+    guessNoise : typical a definition like this is choosen: noiseFloor*(1+(Ham-1)*5)
+    """
+    totalError = False
+    # construct fit window
+#    wnFit, spectrumFit = FitData(wn, spectrum, peakWaveNo, windowLength)
+    wnFit = wn
+    spectrumFit = spectrum
+    # guess fit paras
+    pguess = GuessPeakParameter(wnFit, spectrumFit)
+    sigmas = np.zeros(len(wnFit)) + guessNoise   # assume every data point has same errorbars
+    # proceed fitting
+    popt, pcov = optimize.curve_fit(f_fixoff, wnFit, spectrumFit, pguess[0:-1]) #, sigma=sigmas) #, absolute_sigma=True)
+    #popt, pcov = optimize.curve_fit(f, wnFit, spectrumFit, pguess[0:-1], sigma=sigmas)
+    errors = sp.sqrt(pcov.diagonal())
+    if totalError:
+        # calculate total error of fit function evaluated at maximum of fit function
+        err_fmax = GaussFitError(wn,popt,pcov)
+        # use total fit error as estimate for Amp_err
+        errors[0] = err_fmax
+        AmpErrText = 'Error Amp tot'
+        AreaErrText = 'Error Area tot'
+    else:
+        AmpErrText = 'Error Amp'
+        AreaErrText = 'Error Area'
+    # calculate peak area:
+    area = popt[0]*popt[2]*np.sqrt(np.pi/np.log(16))
+    err_area = abs(area)*np.sqrt((errors[0]/popt[0])**2 + (errors[2]/popt[2])**2) # Gaussian error propagation
+
+    wnFitted = np.linspace(wnFit[0], wnFit[-1], num=3000)
+    #f_fitted = f(wn_fitted, popt[0], popt[1], popt[2], popt[3])
+    fFitted = f_fixoff(wnFitted, popt[0], popt[1], popt[2])
+    print('peak_fit: ' + peakName,popt[0],popt[1],popt[2],area)
+    fitParas = {'Peak': peakName , \
+                'Amp': round_sig(popt[0],3) , \
+                AmpErrText: round_sig(errors[0],1) , \
+                'Center': round(popt[1],3) , \
+                'Error Center':round_sig(errors[1],1) , \
+                'FWHM':round(popt[2],2) , \
+                'Error FWHM':round_sig(errors[2],1) ,\
+                'Area':round_sig(area,3) , \
+                AreaErrText:round_sig(err_area,1)}
+    return wnFitted, fFitted, fitParas
+
+def FitData(wn, spectrum, peakWaveNo, windowLength):
+    # construct fit window
+    lowIndex = find_index(wn, peakWaveNo-0.5*windowLength)
+    highIndex = find_index(wn, peakWaveNo+0.5*windowLength)
+    wnFit = wn[lowIndex:highIndex+1].copy() # fit window of the wavenumber array
+    spectrumFit = spectrum[lowIndex:highIndex+1].copy()  # fit window of the DFT amplitudes array
+    return wnFit, spectrumFit
+
+def GuessPeakParameter(Xfit, Yfit):
+    """
+    Estimates peak parameters for peak fit. XFit and Yfit should be restricted
+    to a small area around the peak of interest. If more than one peak is within
+    Xfit and Yfit, wrong parameters will be estimated. Provide ABSOLUTE value
+    of spectrum.
+    """
+    pguess = np.zeros(4)
+    pguess[0] = Yfit.max()   # Amp
+    pguess[1] = Xfit[np.argmax(Yfit)]   # center
+    pguess[2] = abs(Xfit[findPeakIndexes(Yfit, 0.5)[1]]-Xfit[findPeakIndexes(Yfit, 0.5)[2]]) # FWHM
+    pguess[3] = 0.0 # offset
+    return pguess
+
+def GaussFitError(X,popt,pcov):
+    """
+    Calculates the total error of fit function for a Gaussian fit with no offset evaluated at maximum of fit function
+    """
+    a = popt[0]
+    b = popt[1]
+    c = popt[2]
+    Y = f_fixoff(X, a, b, c)
+    i = find_index(X,popt[1])   # find index of peak maximum
+    # berechne derivatives
+    da = Y[i]/a
+    db = Y[i]*(8*np.log(2)/(c**2)*(X[i]-b))
+    dc = Y[i]*(8*np.log(2)/(c**3)*(X[i]-b)**2)
+    dadb = db/a
+    dadc = dc/a
+    dbdc = db*dc/Y[i]-2*db*Y[i]/c
+    var_f = da**2*pcov[0][0] + db**2*pcov[1][1] + dc**2*pcov[2][2] +\
+            2*(dadb*pcov[0][1] + dadc*pcov[0][2] + dbdc*pcov[1][2])
+    sigma_f = np.sqrt(abs(var_f))
+    return sigma_f
+
+def f_fixoff(wn, Amp, wn_center, FWHM):
+    """Gaussian function without vertical offset"""
+    return Amp*sp.exp(-4*sp.log(2)*((wn-wn_center)/FWHM)**2)
+
+def round_sig(x, sig):
+   return round(x, sig-int(np.floor(np.log10(x)))-1)
+
+def gaus(x,a,x0,sigma):
+    return a*np.exp(-(x-x0)**2/(2*sigma**2))
