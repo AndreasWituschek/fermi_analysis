@@ -45,7 +45,8 @@ zeroPaddingFactor = 2
 
 root_file_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/results/HeDroplet/'
 
-for run_folder in os.listdir(root_file_path)[1:3]:
+for run_folder in sorted(os.listdir(root_file_path))[1:19]:
+    print(run_folder)
     """ Experimental parameters """
     run = int(run_folder[-4:])
     mfli_root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_4/Run_{:03}/work/'.format(run)
@@ -116,11 +117,11 @@ for run_folder in os.listdir(root_file_path)[1:3]:
     T = data['delay']
     
     for dev in device:
-        print(dev)
+        #print(dev)
         mfli_file_path = mfli_root_path + dev + '/'
         mfli_file = h5py.File(mfli_file_path + os.listdir(mfli_file_path)[0], 'r')
         mfli_harmonic = np.array(mfli_file['harmonic'])
-        print(mfli_harmonic)
+        #print(mfli_harmonic)
         mfli_file.close()
         for d in demod:
             i = str(mfli_harmonic[int(d)]) + 'H'
@@ -161,7 +162,7 @@ for run_folder in os.listdir(root_file_path)[1:3]:
             wn, dft = fk.DFT(T_d, Zg, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
             FWHM , peakFullWidth = fk.PeakWidth(T, 0.1, False, zeroPaddingFactor)
             FWHM = FWHM
-            print(FWHM)
+            #print(FWHM)
     
     
             # Plot time domain
@@ -215,7 +216,7 @@ for run_folder in os.listdir(root_file_path)[1:3]:
             figFT = plt.figure('scan_{0}_{1}_FD_{2}'.format(run, dev, i))
             axs = figFT.add_subplot(111)
             axs.plot(wn, abs(dft), '-', color=color, linewidth = 2)
-            axs.plot(points,spectrum*(max(abs(dft))-min(abs(dft)))+min(abs(dft)),'-',color='grey',linewidth = 2)
+            axs.plot(points-(1-mfli_harmonic[int(d)]/5.)*1E7*(1/l_He-1/(l_ref/5.0)),spectrum*(max(abs(dft))-min(abs(dft)))+min(abs(dft)),'-',color='grey',linewidth = 2)
             axs.set_xlabel(r'wavenumber [cm$^{-1}$]', fontsize=14)
             axs.set_ylabel('spectral amp. [arb. u.]', fontsize=14)
             axs.set_title('scan_{0}_{1}_FD_{2}'.format(run, dev, i))

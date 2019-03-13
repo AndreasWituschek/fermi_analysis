@@ -416,7 +416,7 @@ def PeakFit(peakName, peakWaveNo, wn, spectrum, windowLength, guessNoise):
     wnFitted = np.linspace(wnFit[0], wnFit[-1], num=3000)
     #f_fitted = f(wn_fitted, popt[0], popt[1], popt[2], popt[3])
     fFitted = f_fixoff(wnFitted, popt[0], popt[1], popt[2])
-    print('peak_fit: ' + peakName,popt[0],popt[1],popt[2],area)
+    #print('peak_fit: ' + peakName,popt[0],popt[1],popt[2],area)
     fitParas = {'Peak': peakName , \
                 'Amp': round_sig(popt[0],3) , \
                 AmpErrText: round_sig(errors[0],1) , \
