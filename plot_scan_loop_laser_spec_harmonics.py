@@ -59,6 +59,7 @@ for run_folder in sorted(os.listdir(root_file_path))[26:]:
     l_file = h5py.File(l_file_path + os.listdir(l_file_path)[0], 'r')
     l_FEL = np.array(l_file['/photon_diagnostics/Spectrometer/Wavelength']) # FEL wavelength in nm, used for calculation of FEL spectrum
     print(l_FEL)
+    l_file.close()
 
     points = np.linspace(180000.0,195000.0,1000)
     fwhm_FEL_wn = 1E7*(fwhm_FEL/l_FEL**2) # wavenumber FWHM of FEL
