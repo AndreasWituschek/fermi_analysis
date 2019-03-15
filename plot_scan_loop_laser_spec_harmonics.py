@@ -73,10 +73,10 @@ for run_folder in sorted(os.listdir(root_file_path))[26:]:
 
     data = {
         'run_numbers': np.array(h5f.get('run_numbers')),
-        'I0': np.array(h5f.get('I0')),
-        's_I0': np.array(h5f.get('s_I0')),
-        'delay': np.array(h5f.get('delay')),
-        's_delay': np.array(h5f.get('s_delay')),
+        'I0': np.array(h5f.get('LDM/I0')),
+        's_I0': np.array(h5f.get('LDM/s_I0')),
+        'delay': np.array(h5f.get('LDM/delay')),
+        's_delay': np.array(h5f.get('LDM/s_delay')),
         'DEV3265': {
             'x0': np.array(h5f.get('DEV3265/x0')),
             'y0': np.array(h5f.get('DEV3265/y0')),

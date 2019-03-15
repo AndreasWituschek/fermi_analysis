@@ -15,11 +15,10 @@ import h5py
 delay_zero_pos = 11025.66
 mfli_name = ['DEV3265', 'DEV3269']  # number of MFLI demodulator to be analyzed
 
-runs = [1367, 1434]
+runs = [1676, 1685]
+run_remove = []
 
 run_list = range(runs[0], runs[1] + 1)
-
-run_remove = [1385, 1387, 1413, 1420]
 for rr in run_remove:
     run_list.remove(rr)
 
@@ -27,11 +26,12 @@ for rr in run_remove:
 cut_frac = 0.2   # constant fraction of data points cut from MFLI data vector, starting at 0 -> [0:cut_frac*length] is cut
 
 """ File paths """
-analyse_path = 'C:/Users/FemtoMeasure/Desktop/HeDroplets/'
+# path where it saves the preanalysed data
+analyse_path = 'C:/Users/FemtoMeasure/Desktop/setup/'
 analyse_path += 'scan_{}/'.format(runs[0])
 
-
-root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_4/'
+# path where the raw data is
+root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_5/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_4/'
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late/scan_1834
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late
@@ -63,6 +63,7 @@ ldm_delay_m = np.array([])
 ldm_delay_s = np.array([])
 ldm_i0_m = np.array([])
 ldm_i0_s = np.array([])
+ldm_l_fel_m = np.array([])
 
 # Run numbers
 new_run_numbers = np.array([])
@@ -114,27 +115,32 @@ for run in run_list:
     ldm_i0 = np.array([])
     for run_file in os.listdir(ldm_file_path):
         ldm_file = h5py.File(ldm_file_path + run_file, 'r')
-        ldm_delay = np.append(ldm_delay, np.array(ldm_file['photon_source']['SeedLaser']['trls_sl_03_pos']))
-        ldm_i0 = np.append(ldm_i0, np.array(ldm_file['photon_diagnostics']['FEL01']['I0_monitor']['iom_sh_a']))
+        ldm_delay = np.append(ldm_delay, np.array(ldm_file['/photon_source/SeedLaser/trls_sl_03_pos']))
+        ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_sh_a']))
+        ldm_l_fel = np.array(ldm_file['/photon_diagnostics/Spectrometer/Wavelength'])
         ldm_file.close()
     ldm_delay_m = np.append(ldm_delay_m, np.mean(ldm_delay) - delay_zero_pos)
     ldm_delay_s = np.append(ldm_delay_s, np.std(ldm_delay))
     ldm_i0_m = np.append(ldm_i0_m, np.mean(ldm_i0))
     ldm_i0_s = np.append(ldm_i0_s, np.std(ldm_i0))
+    ldm_l_fel_m = np.append(ldm_l_fel_m, ldm_l_fel)
 
 # Handle MFLI data
     for mfli in mfli_name:
         mfli_file_path = run_path +'work/' + mfli + '/'
-        mfli_file = h5py.File(mfli_file_path + run_file, 'r')
-        mfli_data[mfli]['harmonic'] = np.append(mfli_data[mfli]['harmonic'], np.array(mfli_file['harmonic']))
-        mfli_file.close()
+        dir_list = os.listdir(mfli_file_path)
+        run_file = dir_list[0]
+        if run == runs[0]:
+            mfli_file = h5py.File(mfli_file_path + run_file, 'r')
+            mfli_data[mfli]['harmonic'] = np.array(mfli_file['harmonic'])
+            mfli_file.close()
 
         # loop through demodulators
         for demod in range(3):
             # loop through files
             mfli_x = np.array([])
             mfli_y = np.array([])
-            for run_file in os.listdir(mfli_file_path):
+            for run_file in dir_list:
                 mfli_file = h5py.File(mfli_file_path + run_file, 'r')
                 mfli_x = np.append(mfli_x, np.array(mfli_file['x' + str(demod)]))
                 mfli_y = np.append(mfli_y, np.array(mfli_file['y' + str(demod)]))
@@ -151,34 +157,32 @@ if file_exists:
     if not new_run_numbers.size == 0:
         print('run_numbers: {}'.format(new_run_numbers))
         analysis_file = h5py.File(analyse_path, 'a')
-#        analysis_file.create_dataset('run_numbers', data=np.arange(10))
-        # Append LDM data
-        # Delay
-        analysis_file['delay'].resize((analysis_file['delay'].shape[0] + ldm_delay_m.shape[0]), axis = 0)
-        analysis_file['delay'][-ldm_delay_m.shape[0]:] = ldm_delay_m
-        # Std Delay
-        analysis_file['s_delay'].resize((analysis_file['s_delay'].shape[0] + ldm_delay_s.shape[0]), axis = 0)
-        analysis_file['s_delay'][-ldm_delay_s.shape[0]:] = ldm_delay_s
-        # I0
-        analysis_file['I0'].resize((analysis_file['I0'].shape[0] + ldm_i0_m.shape[0]), axis = 0)
-        analysis_file['I0'][-ldm_i0_m.shape[0]:] = ldm_i0_m
-        # Std I0
-        analysis_file['s_I0'].resize((analysis_file['s_I0'].shape[0] + ldm_i0_s.shape[0]), axis = 0)
-        analysis_file['s_I0'][-ldm_i0_s.shape[0]:] = ldm_i0_s
-
         # Append run_numbers
         analysis_file['run_numbers'].resize((analysis_file['run_numbers'].shape[0] + new_run_numbers.shape[0]), axis = 0)
         analysis_file['run_numbers'][-new_run_numbers.shape[0]:] = new_run_numbers
 
+        # Append LDM data
+        ldm_group = analysis_file.get('LDM')
+        # Delay
+        ldm_group['delay'].resize((ldm_group['delay'].shape[0] + ldm_delay_m.shape[0]), axis = 0)
+        ldm_group['delay'][-ldm_delay_m.shape[0]:] = ldm_delay_m
+        # Std Delay
+        ldm_group['s_delay'].resize((ldm_group['s_delay'].shape[0] + ldm_delay_s.shape[0]), axis = 0)
+        ldm_group['s_delay'][-ldm_delay_s.shape[0]:] = ldm_delay_s
+        # I0
+        ldm_group['I0'].resize((ldm_group['I0'].shape[0] + ldm_i0_m.shape[0]), axis = 0)
+        ldm_group['I0'][-ldm_i0_m.shape[0]:] = ldm_i0_m
+        # Std I0
+        ldm_group['s_I0'].resize((ldm_group['s_I0'].shape[0] + ldm_i0_s.shape[0]), axis = 0)
+        ldm_group['s_I0'][-ldm_i0_s.shape[0]:] = ldm_i0_s
+        # l_ref
+        ldm_group['l_fel'].resize((ldm_group['l_fel'].shape[0] + ldm_l_fel_m.shape[0]), axis = 0)
+        ldm_group['l_fel'][-ldm_l_fel_m.shape[0]:] = ldm_l_fel_m
 
         # Append MFLI data
         for mfli in mfli_name:
             mfli_group = analysis_file.get(mfli)
             mfli_device = mfli_data[mfli]
-
-            # Append harmonic
-            mfli_group['harmonic'].resize((mfli_group['harmonic'].shape[0] + mfli_device['harmonic'].shape[0]), axis = 0)
-            mfli_group['harmonic'][-mfli_device['harmonic'].shape[0]:] = mfli_device['harmonic']
 
             for demod in range(3):
                 # X values
@@ -194,14 +198,17 @@ if file_exists:
 else:
     analysis_file = h5py.File(analyse_path, 'w')
     # Create LDM dataset
+    ldm_group = analysis_file.create_group('LDM')
     # Delay
-    analysis_file.create_dataset('delay', data=ldm_delay_m, maxshape=(None,))
+    ldm_group.create_dataset('delay', data=ldm_delay_m, maxshape=(None,))
     # Std Delay
-    analysis_file.create_dataset('s_delay', data=ldm_delay_s, maxshape=(None,))
+    ldm_group.create_dataset('s_delay', data=ldm_delay_s, maxshape=(None,))
     # I0
-    analysis_file.create_dataset('I0', data=ldm_i0_m, maxshape=(None,))
+    ldm_group.create_dataset('I0', data=ldm_i0_m, maxshape=(None,))
     # Std I0
-    analysis_file.create_dataset('s_I0', data=ldm_i0_s, maxshape=(None,))
+    ldm_group.create_dataset('s_I0', data=ldm_i0_s, maxshape=(None,))
+    # l_ref
+    ldm_group.create_dataset('l_fel', data=ldm_l_fel_m, maxshape=(None,))
 
     # Run numbers
     analysis_file.create_dataset('run_numbers', data=new_run_numbers, maxshape=(None,))
@@ -222,4 +229,5 @@ else:
             mfli_group.create_dataset('y' + str(demod), data=mfli_device['y' + str(demod)], maxshape=(None,))
             mfli_group.create_dataset('s_y' + str(demod), data=mfli_device['s_y' + str(demod)], maxshape=(None,))
 
-analysis_file.close()
+if not new_run_numbers.size == 0:
+    analysis_file.close()

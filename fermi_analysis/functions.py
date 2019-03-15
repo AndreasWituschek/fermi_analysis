@@ -232,7 +232,7 @@ def GaussWindow(T, X, suscept):
     start = T[0]
     stop = T[-1]
     if suscept:
-        mu = 0.0
+        mu = stop
         std = 2*(abs(stop-start))/sp.sqrt(48)  # so Gaussian will be dropped to 5% (e.g. 1/e^3) at edges of dataset
     else:
         mu = (stop+start)/2

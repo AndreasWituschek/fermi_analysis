@@ -407,7 +407,7 @@ def GaussWindow(T, X, suscept):
         mu = 0.0
         std = 2*(abs(stop-start))/sp.sqrt(48)  # so Gaussian will be dropped to 5% (e.g. 1/e^3) at edges of dataset
     else:
-        mu = (stop+start)/2
+        mu = (stop+start)/2.
         std = (abs(stop-start))/sp.sqrt(48)  # so Gaussian will be dropped to 5% (e.g. 1/e^3) at edges of dataset
     return X*sp.exp(-((T-mu)/(2*std))**2)
 
