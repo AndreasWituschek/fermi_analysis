@@ -108,7 +108,7 @@ for dev in device:
 
         R = np.sqrt(Z.real**2 + Z.imag**2)
         R_s = np.sqrt(Z_s.real**2 + Z_s.imag**2)
-        Phi = np.angle(Z, deg=True)
+        Phi = np.angle(Z, deg=False)
 
 # Create theoretical curve
 #        if draw_theory:
@@ -157,7 +157,7 @@ for dev in device:
 
         ax = figTD.add_subplot(514)
         #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-        ax.plot(delay, Phi, '-', color=color)
+        ax.plot(delay, np.unwrap(Phi), '-', color=color)
         ax.set_ylabel('Phi')
         ax.grid()
 
@@ -191,7 +191,7 @@ for dev in device:
         axs.grid()
         if save_fig:
             plt.savefig(file_path + 'scan_{0}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
-        
+
         # spectrogram
         figSG = plt.figure('scan_{0}_{1}_d{2}_SGn_{3}'.format(run, dev, d, i))
 #        plt.specgram(Z, Fs=1./np.mean(np.diff(T_d))*1e15, NFFT=32, noverlap=16)
@@ -200,12 +200,13 @@ for dev in device:
                                         return_onesided=True, # mode='complex',
                                         scaling='density', nfft=256,
                                         window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
-        f, t, speci = signal.spectrogram(np.real(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
+        f, t, speci = signal.spectrogram(np.imag(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
                                         nperseg=32, noverlap=31,
                                         return_onesided=True, # mode='complex',
                                         scaling='density', nfft=256,
                                         window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
         f = f/100.0/spc.c + harmonic*10**7/l_ref
+        t = t / 1e-15 + delay[0]
 
         spec = specr + 1j * speci
         print np.min(np.abs(spec))
