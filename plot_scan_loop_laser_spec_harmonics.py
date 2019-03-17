@@ -220,6 +220,13 @@ for run_folder in sorted(os.listdir(root_file_path))[26:]:
     #        axs.text(0.1, plot_y_range * 0.9, str(FWHM))
             axs.grid()
             plt.savefig(file_path + 'scan_{0}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
+            
+            
+            # spectrogram
+            figSG = plt.figure('scan_{0}_{1}_d{2}_SG_{3}'.format(run, dev, d, i))
+            #T_d, Zg
+            plt.specgram(Zg, 1./np.mean(np.diff(T_d)), NFFT=32)
+            
 
     plt.close('all')
 

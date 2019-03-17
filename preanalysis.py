@@ -15,8 +15,8 @@ import h5py
 delay_zero_pos = 11025.66
 mfli_name = ['DEV3265', 'DEV3269']  # number of MFLI demodulator to be analyzed
 
-runs = [1676, 1685]
-run_remove = []
+runs = [893, 1209]
+run_remove = [1078, 1079, 1080, 1081, 1153, 1161, 1178, 1205, 1206]
 
 run_list = range(runs[0], runs[1] + 1)
 for rr in run_remove:
@@ -31,7 +31,7 @@ analyse_path = 'C:/Users/FemtoMeasure/Desktop/setup/'
 analyse_path += 'scan_{}/'.format(runs[0])
 
 # path where the raw data is
-root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_5/'
+root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_3/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_4/'
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late/scan_1834
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late

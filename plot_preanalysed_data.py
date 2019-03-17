@@ -8,15 +8,18 @@ Created on Fri Mar 15 11:46:56 2019
 import numpy as np
 import fermi_analysis.functions as fk
 import h5py
+from scipy import signal
 import matplotlib.pyplot as plt
+import scipy.constants as spc
 
 
 """ Data parameters """
-run = 1676
-demod = ['0', '1', '2']
-device = ['DEV3265', 'DEV3269']
+run = 893
+demod = ['1'] #  ['0', '1', '2']
+device = ['DEV3265'] #  ['DEV3265', 'DEV3269']
 root_file_path = 'C:/Users/FemtoMeasure/Desktop/setup/'
-interactive_plots = False
+interactive_plots = True
+save_fig = False
 
 """Experimental Parameters"""
 # parameters for theoretical curve
@@ -108,8 +111,9 @@ for dev in device:
         Phi = np.angle(Z, deg=True)
 
 # Create theoretical curve
-#        Ttheo = np.linspace(T[0],T[-1], 1000)
-#        Xtd,Ytd,Xt,Yt = fk.Curve(l_He, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
+#        if draw_theory:
+        Ttheo = np.linspace(T[0],T[-1], 1000)
+        Xtd,Ytd,Xt,Yt = fk.Curve(l_He, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
 
         delay = T
         X = Z.real
@@ -129,15 +133,19 @@ for dev in device:
 
         # Plot time domain
         figTD = plt.figure('scan_{0}_{1}_d{2}_TD_{3}'.format(run, dev, d, i), figsize=(9, 12))
+
         ax = figTD.add_subplot(511)
         ax.set_title('scan_{0}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
-
         ax.errorbar(delay, X, yerr=X_s, color='b', linestyle='')
         ax.plot(delay, X, 'b-')
+        ax.plot(Ttheo, Xt, 'b', alpha=0.3)
+        ax.set_ylabel('Amplitude in a.u.')
         ax.grid()
+
         ax = figTD.add_subplot(512)
         ax.errorbar(delay, Y, yerr=Y_s, color=color, linestyle='')
         ax.plot(delay, Y, '-', color=color)
+        ax.plot(Ttheo, Yt, 'r', alpha=0.3)
         ax.set_ylabel('Amplitude in a.u.')
         ax.grid()
 
@@ -162,7 +170,8 @@ for dev in device:
         ax.grid()
 
         plt.tight_layout()
-        plt.savefig(file_path + 'scan_{0}_{1}_d{2}_TD_{3}.png'.format(run, dev, d, i), dpi=400)
+        if save_fig:
+            plt.savefig(file_path + 'scan_{0}_{1}_d{2}_TD_{3}.png'.format(run, dev, d, i), dpi=400)
 
         # plot frequency domain
         figFT = plt.figure('scan_{0}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
@@ -180,7 +189,48 @@ for dev in device:
         axs.axhline(y= plot_y_range * 0.9 + axs.get_ylim()[0], xmin=0.1, xmax=0.1 + FWHM / plot_x_range, linewidth=3)
 #        axs.text(0.1, plot_y_range * 0.9, str(FWHM))
         axs.grid()
-        plt.savefig(file_path + 'scan_{0}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
+        if save_fig:
+            plt.savefig(file_path + 'scan_{0}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
+        
+        # spectrogram
+        figSG = plt.figure('scan_{0}_{1}_d{2}_SGn_{3}'.format(run, dev, d, i))
+#        plt.specgram(Z, Fs=1./np.mean(np.diff(T_d))*1e15, NFFT=32, noverlap=16)
+        f, t, specr = signal.spectrogram(np.real(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
+                                        nperseg=32, noverlap=31,
+                                        return_onesided=True, # mode='complex',
+                                        scaling='density', nfft=256,
+                                        window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
+        f, t, speci = signal.spectrogram(np.real(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
+                                        nperseg=32, noverlap=31,
+                                        return_onesided=True, # mode='complex',
+                                        scaling='density', nfft=256,
+                                        window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
+        f = f/100.0/spc.c + harmonic*10**7/l_ref
+
+        spec = specr + 1j * speci
+        print np.min(np.abs(spec))
+        print np.max(np.abs(spec))
+        print type(spec[0][0])
+        print spec.shape
+#        plt.imshow(np.real(spec))
+        plt.pcolormesh(t, f, np.real(spec), vmin= np.min(np.abs(spec)), vmax=np.max(np.abs(spec))*1.0)
+        plt.hlines(1E7/l_He, np.min(t), np.max(t))
+        plt.show()
+
+##""" slide fourier trafo """
+#        S = np.zeros((np.size(T_d), np.size(wn)))
+#        slide_positions = np.arange(T_d[0],T_d[-1], slide_step)
+#        for slide_pos in slide_positions:
+#            Z_slide = fk.slide_window(T_d, Z, slide_pos, FWHM)    # multiply gaussian onto data set which is centered at current sliding position
+#            DFT_slide, wn = fk.DFT(T_d, Z_slide, Td, l_ref , harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
+#            # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
+#            for i in range(np.size(T_d)):
+#                S[i,:] += DFT_slide*fk.weighting_coeff(T_d[i], slide_pos, FWHM)
+#        # normalize to get proper average
+#        S[:,:] /= np.size(slide_positions)
+#        figSlide = plt.figure('slide')
+#        plt.imshow(S.transpose(), origin='lower', aspect='auto')
+#        plt.show()
 
 if not interactive_plots:
     plt.close('all')

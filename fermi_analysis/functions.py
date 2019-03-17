@@ -221,7 +221,6 @@ def DelayMove(delay_pos):
         delay_pos=delay_pos[0]
     else: print "Delaystage moved during run!"
 
-
 def GaussWindow(T, X, suscept):
     """
     Applies Gaussian window to data set which decays to 5% at edges of data set
@@ -239,14 +238,11 @@ def GaussWindow(T, X, suscept):
         std = (abs(stop-start))/sp.sqrt(48)  # so Gaussian will be dropped to 5% (e.g. 1/e^3) at edges of dataset
     return X*sp.exp(-((T-mu)/(2*std))**2)
 
-
 def zero_padding(T, factor):
     return 2**(int(round(np.log2(T.size)+0.5))+factor)  # Anzahl Datenpunkte auf die zur Not mit Zero-Padding aufgefuellt wird
 
-
 def find_index(array, value):
     return np.argmin(abs(array-value))  # loops through array from index zero and returns first index that is closest to value
-
 
 def redistribute(array, index):
     return np.concatenate((array[index:],array[0:index]))

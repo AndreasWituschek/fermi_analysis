@@ -13,7 +13,6 @@ import scipy as sp
 import scipy.constants as const
 from scipy import fftpack
 from scipy import optimize
-from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -21,7 +20,6 @@ import string
 from math import log10, floor
 from Tkinter import Tk
 from tkFileDialog import askopenfilename
-import os
 import csv
 from scipy.integrate import simps   # method to integrate fixed sample which is unequally spaced
 import ast
@@ -704,7 +702,6 @@ def BundelList(peakList, peakWidth):
     transfered back. It could be that due to float precission the back transform
     is in some case not unique.
     """
-    bundeledPeaks = []  # bundeled list of object Peak 
     tempList = [] # list of peak wavenumbers
     bundeledList = []
     # create list ordered with increasing wavenumbers
@@ -789,7 +786,6 @@ def MultiPeakFitFixed(Peaks, wn, spectrum, peakFWHM, singlePeakMargin, guessNois
     spectrum : should be ABSOLUTE value of spectrum
     guessNoise : typical a definition like this is choosen: noiseFloor*(1+(Ham-1)*5)
     """
-    totalError = False
     # guess fit parameters
     pguess = []
     fixedCenters = []
@@ -1437,4 +1433,3 @@ class Peak:
 
     def set_harmonic(self,harmonic):
         self.__harmonic = harmonic
-
