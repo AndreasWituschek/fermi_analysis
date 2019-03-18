@@ -14,12 +14,15 @@ import scipy.constants as spc
 
 
 """ Data parameters """
-run = 893
-demod = ['1'] #  ['0', '1', '2']
-device = ['DEV3265'] #  ['DEV3265', 'DEV3269']
-root_file_path = 'C:/Users/FemtoMeasure/Desktop/setup/'
+run = 830
+demod = ['0']
+device = ['dev3265']
+#demod = ['0', '1', '2']
+#device = ['dev3265', 'dev3269']
+root_file_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/combined/'
 interactive_plots = True
 save_fig = False
+plotTheo = False
 
 """Experimental Parameters"""
 # parameters for theoretical curve
@@ -33,20 +36,20 @@ color = 'r'
 data_window = [-1000,1000]
 
 """ Parameters for theoretical curve """
-phi =-0#-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
+phi =170.#-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
 A = 1.  # amplitude (=R from MFLI)
 a = 1.   # amplitude scaling factor
 offset = 0.  # offset
 
 """ analysis parameters """
-slide_step = 100
-FWHM = 100
+slide_step = 32
+FWHM_slide = slide_step / np.sqrt(48)
 zeroPaddingFactor = 2
 suscept = False
 
 # Load preanalysed data
-file_path = root_file_path + '/scan_{0}/'.format(int(run))
-h5f = h5py.File(file_path + 'scan_{0}.h5'.format(int(run)), 'r')
+file_path = root_file_path + 'scan_{0:03}/'.format(int(run))
+h5f = h5py.File(file_path + 'scan_{0:03}.h5'.format(int(run)), 'r')
 
 # sort data by delay in ascending order
 sort_inds = np.array(h5f.get('LDM/delay')).argsort()
@@ -58,44 +61,46 @@ data = {
         's_I0': np.array(h5f.get('LDM/s_I0'))[sort_inds],
         'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
         's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
-        'l_fel': np.array(h5f.get('LDM/l_fel'))[sort_inds], },
-    'DEV3265': {
-        'harmonic': np.array(h5f.get('DEV3265/harmonic')),
-        'x0': np.array(h5f.get('DEV3265/x0'))[sort_inds],
-        'y0': np.array(h5f.get('DEV3265/y0'))[sort_inds],
-        'x1': np.array(h5f.get('DEV3265/x1'))[sort_inds],
-        'y1': np.array(h5f.get('DEV3265/y1'))[sort_inds],
-        'x2': np.array(h5f.get('DEV3265/x2'))[sort_inds],
-        'y2': np.array(h5f.get('DEV3265/y2'))[sort_inds],
-        's_x0': np.array(h5f.get('DEV3265/s_x0'))[sort_inds],
-        's_y0': np.array(h5f.get('DEV3265/s_y0'))[sort_inds],
-        's_x1': np.array(h5f.get('DEV3265/s_x1'))[sort_inds],
-        's_y1': np.array(h5f.get('DEV3265/s_y1'))[sort_inds],
-        's_x2': np.array(h5f.get('DEV3265/s_x2'))[sort_inds],
-        's_y2': np.array(h5f.get('DEV3265/s_y2'))[sort_inds], },
-    'DEV3269': {
-        'harmonic': np.array(h5f.get('DEV3269/harmonic')),
-        'x0': np.array(h5f.get('DEV3269/x0'))[sort_inds],
-        'y0': np.array(h5f.get('DEV3269/y0'))[sort_inds],
-        'x1': np.array(h5f.get('DEV3269/x1'))[sort_inds],
-        'y1': np.array(h5f.get('DEV3269/y1'))[sort_inds],
-        'x2': np.array(h5f.get('DEV3269/x2'))[sort_inds],
-        'y2': np.array(h5f.get('DEV3269/y2'))[sort_inds],
-        's_x0': np.array(h5f.get('DEV3269/s_x0'))[sort_inds],
-        's_y0': np.array(h5f.get('DEV3269/s_y0'))[sort_inds],
-        's_x1': np.array(h5f.get('DEV3269/s_x1'))[sort_inds],
-        's_y1': np.array(h5f.get('DEV3269/s_y1'))[sort_inds],
-        's_x2': np.array(h5f.get('DEV3269/s_x2'))[sort_inds],
-        's_y2': np.array(h5f.get('DEV3269/s_y2'))[sort_inds], }, }
+        'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
+            },
+    'dev3265': {
+        'harmonic': np.array(h5f.get('dev3265/harmonic')),
+        'x0': np.array(h5f.get('dev3265/x0'))[sort_inds],
+        'y0': np.array(h5f.get('dev3265/y0'))[sort_inds],
+        'x1': np.array(h5f.get('dev3265/x1'))[sort_inds],
+        'y1': np.array(h5f.get('dev3265/y1'))[sort_inds],
+        'x2': np.array(h5f.get('dev3265/x2'))[sort_inds],
+        'y2': np.array(h5f.get('dev3265/y2'))[sort_inds],
+        's_x0': np.array(h5f.get('dev3265/s_x0'))[sort_inds],
+        's_y0': np.array(h5f.get('dev3265/s_y0'))[sort_inds],
+        's_x1': np.array(h5f.get('dev3265/s_x1'))[sort_inds],
+        's_y1': np.array(h5f.get('dev3265/s_y1'))[sort_inds],
+        's_x2': np.array(h5f.get('dev3265/s_x2'))[sort_inds],
+        's_y2': np.array(h5f.get('dev3265/s_y2'))[sort_inds], },
+    'dev3269': {
+        'harmonic': np.array(h5f.get('dev3269/harmonic')),
+        'x0': np.array(h5f.get('dev3269/x0'))[sort_inds],
+        'y0': np.array(h5f.get('dev3269/y0'))[sort_inds],
+        'x1': np.array(h5f.get('dev3269/x1'))[sort_inds],
+        'y1': np.array(h5f.get('dev3269/y1'))[sort_inds],
+        'x2': np.array(h5f.get('dev3269/x2'))[sort_inds],
+        'y2': np.array(h5f.get('dev3269/y2'))[sort_inds],
+        's_x0': np.array(h5f.get('dev3269/s_x0'))[sort_inds],
+        's_y0': np.array(h5f.get('dev3269/s_y0'))[sort_inds],
+        's_x1': np.array(h5f.get('dev3269/s_x1'))[sort_inds],
+        's_y1': np.array(h5f.get('dev3269/s_y1'))[sort_inds],
+        's_x2': np.array(h5f.get('dev3269/s_x2'))[sort_inds],
+        's_y2': np.array(h5f.get('dev3269/s_y2'))[sort_inds], }, }
 h5f.close()
-
+l_fel = data['LDM']['l_seed'][0]
+print l_fel
 T = data['LDM']['delay']
 
 ''' laser spectrum '''
 points = np.linspace(180000.0,195000.0,1000)
-fwhm_FEL_wn = 1E7*(fwhm_FEL/data['LDM']['l_fel'][0]**2) # wavenumber FWHM of FEL
-l_FEL = 1E7/data['LDM']['l_fel'][0] # wavenumber CWL of FEL
-spectrum = np.exp(-4.0*0.693147*(points-l_FEL)**2/fwhm_FEL_wn**2) # spectrum in wavenumber space
+fwhm_FEL_wn = 1E7*(fwhm_FEL/(l_fel/5)**2) # wavenumber FWHM of FEL
+l_FEL = 1E7/l_fel # wavenumber CWL of FEL
+spectrum = np.exp(-4.0*0.693147*(points-l_FEL*5)**2/fwhm_FEL_wn**2) # spectrum in wavenumber space
 
 # loop over the mfli devices
 for dev in device:
@@ -132,20 +137,20 @@ for dev in device:
         FWHM = FWHM
 
         # Plot time domain
-        figTD = plt.figure('scan_{0}_{1}_d{2}_TD_{3}'.format(run, dev, d, i), figsize=(9, 12))
+        figTD = plt.figure('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i), figsize=(9, 12))
 
         ax = figTD.add_subplot(511)
-        ax.set_title('scan_{0}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
+        ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
         ax.errorbar(delay, X, yerr=X_s, color='b', linestyle='')
         ax.plot(delay, X, 'b-')
-        ax.plot(Ttheo, Xt, 'b', alpha=0.3)
+        if plotTheo: ax.plot(Ttheo, Xt, 'b', alpha=0.3)
         ax.set_ylabel('Amplitude in a.u.')
         ax.grid()
 
         ax = figTD.add_subplot(512)
         ax.errorbar(delay, Y, yerr=Y_s, color=color, linestyle='')
         ax.plot(delay, Y, '-', color=color)
-        ax.plot(Ttheo, Yt, 'r', alpha=0.3)
+        if plotTheo: ax.plot(Ttheo, Yt, 'r', alpha=0.3)
         ax.set_ylabel('Amplitude in a.u.')
         ax.grid()
 
@@ -158,29 +163,29 @@ for dev in device:
         ax = figTD.add_subplot(514)
         #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
         ax.plot(delay, np.unwrap(Phi), '-', color=color)
-        ax.set_ylabel('Phi')
+        ax.set_ylabel('Phi (degree)')
         ax.grid()
 
         ax = figTD.add_subplot(515)
         #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
         ax.plot(delay, np.abs(np.append(np.diff(delay)[0], np.diff(delay))), '-', color=color)
-        ax.set_ylabel('step sizes')
+        ax.set_ylabel('step sizes (fs)')
         ax.set_xlabel('Delay in fs')
         ax.set_ylim(0,3)
         ax.grid()
 
         plt.tight_layout()
         if save_fig:
-            plt.savefig(file_path + 'scan_{0}_{1}_d{2}_TD_{3}.png'.format(run, dev, d, i), dpi=400)
+            plt.savefig(file_path + 'scan_{0:03}_{1}_d{2}_TD_{3}.png'.format(run, dev, d, i), dpi=400)
 
         # plot frequency domain
-        figFT = plt.figure('scan_{0}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
+        figFT = plt.figure('scan_{0:03}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
         axs = figFT.add_subplot(111)
         axs.plot(wn, abs(dft), '-', color=color, linewidth = 2)
         axs.plot(points-(1-mfli_harmonic/5.)*1E7*(1/l_He-1/(l_ref/5.0)),spectrum*(max(abs(dft))-min(abs(dft)))+min(abs(dft)),'-',color='grey',linewidth = 2)
         axs.set_xlabel(r'wavenumber [cm$^{-1}$]', fontsize=14)
         axs.set_ylabel('spectral amp. [arb. u.]', fontsize=14)
-        axs.set_title('scan_{0}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
+        axs.set_title('scan_{0:03}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
         axs.set_xlim(180000.,195000.)
         axs.axvline(1E7/l_He,color = 'k' ,linestyle='-', linewidth= 2)
         axs.axvline(harmonic*1E7/l_ref,color = 'k',linestyle='--', linewidth= 2)
@@ -190,48 +195,24 @@ for dev in device:
 #        axs.text(0.1, plot_y_range * 0.9, str(FWHM))
         axs.grid()
         if save_fig:
-            plt.savefig(file_path + 'scan_{0}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
+            plt.savefig(file_path + 'scan_{0:03}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
 
-        # spectrogram
-        figSG = plt.figure('scan_{0}_{1}_d{2}_SGn_{3}'.format(run, dev, d, i))
-#        plt.specgram(Z, Fs=1./np.mean(np.diff(T_d))*1e15, NFFT=32, noverlap=16)
-        f, t, specr = signal.spectrogram(np.real(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
-                                        nperseg=32, noverlap=31,
-                                        return_onesided=True, # mode='complex',
-                                        scaling='density', nfft=256,
-                                        window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
-        f, t, speci = signal.spectrogram(np.imag(Z), fs=1./np.mean(np.diff(T_d*1e-15)),
-                                        nperseg=32, noverlap=31,
-                                        return_onesided=True, # mode='complex',
-                                        scaling='density', nfft=256,
-                                        window=signal.get_window(('gaussian', int(32 / np.sqrt(48))), 32))
-        f = f/100.0/spc.c + harmonic*10**7/l_ref
-        t = t / 1e-15 + delay[0]
-
-        spec = specr + 1j * speci
-        print np.min(np.abs(spec))
-        print np.max(np.abs(spec))
-        print type(spec[0][0])
-        print spec.shape
-#        plt.imshow(np.real(spec))
-        plt.pcolormesh(t, f, np.real(spec), vmin= np.min(np.abs(spec)), vmax=np.max(np.abs(spec))*1.0)
-        plt.hlines(1E7/l_He, np.min(t), np.max(t))
+        # plot spec
+        figFT = plt.figure('scan_{0:03}_{1}_d{2}_SG_{3}'.format(run, dev, d, i))
+        print(T_d[0], T_d[-1])
+        slide_positions = np.arange(T_d[0],T_d[-1], slide_step)
+        S = np.zeros((slide_positions.size, wn.size))
+        for slide_pos in slide_positions:
+            Z_slide = fk.slide_window(T_d, Z, slide_pos, FWHM_slide)    # multiply gaussian onto data set which is centered at current sliding position
+            DFT_slide, wn = fk.DFT(T_d, Z_slide, Td, l_ref , harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
+            # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
+            for i in range(np.size(slide_positions)):
+                S[i,:] += DFT_slide*fk.weighting_coeff(T_d[i], slide_pos, FWHM_slide)
+        S[:,:] /= np.size(slide_positions)
+        plt.pcolormesh(S.transpose())
         plt.show()
-
-##""" slide fourier trafo """
-#        S = np.zeros((np.size(T_d), np.size(wn)))
-#        slide_positions = np.arange(T_d[0],T_d[-1], slide_step)
-#        for slide_pos in slide_positions:
-#            Z_slide = fk.slide_window(T_d, Z, slide_pos, FWHM)    # multiply gaussian onto data set which is centered at current sliding position
-#            DFT_slide, wn = fk.DFT(T_d, Z_slide, Td, l_ref , harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
-#            # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
-#            for i in range(np.size(T_d)):
-#                S[i,:] += DFT_slide*fk.weighting_coeff(T_d[i], slide_pos, FWHM)
-#        # normalize to get proper average
-#        S[:,:] /= np.size(slide_positions)
-#        figSlide = plt.figure('slide')
-#        plt.imshow(S.transpose(), origin='lower', aspect='auto')
-#        plt.show()
 
 if not interactive_plots:
     plt.close('all')
+else:
+    plt.show()

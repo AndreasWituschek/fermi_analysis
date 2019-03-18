@@ -13,25 +13,26 @@ import h5py
 """Experimental Parameters"""
 # parameters for theoretical curve
 delay_zero_pos = 11025.66
-mfli_name = ['DEV3265', 'DEV3269']  # number of MFLI demodulator to be analyzed
+mfli_name = ['dev3265', 'dev3269']  # number of MFLI demodulator to be analyzed
 
-runs = [893, 1209]
-run_remove = [1078, 1079, 1080, 1081, 1153, 1161, 1178, 1205, 1206]
+runs = [830, 1133]
+run_remove = [835, 1037] #[1153, 1161, 1178, 1205, 1206]
 
 run_list = range(runs[0], runs[1] + 1)
 for rr in run_remove:
-    run_list.remove(rr)
+    if rr in run_list:
+        run_list.remove(rr)
 
 """ Analysis parameter """
 cut_frac = 0.2   # constant fraction of data points cut from MFLI data vector, starting at 0 -> [0:cut_frac*length] is cut
 
 """ File paths """
 # path where it saves the preanalysed data
-analyse_path = 'C:/Users/FemtoMeasure/Desktop/setup/'
-analyse_path += 'scan_{}/'.format(runs[0])
-
-# path where the raw data is
-root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_3/'
+analyse_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/combined/'
+analyse_path += 'scan_{:03}/'.format(runs[0])
+# path where the raw data is/home/ldm/ExperimentalData/Online4LDM
+#root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_3/'
+root_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_4/'
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late/scan_1834
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late
@@ -45,7 +46,7 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
-analyse_path += 'scan_{}.h5'.format(runs[0])
+analyse_path += 'scan_{:03}.h5'.format(runs[0])
 
 try:
     analysis_file = h5py.File(analyse_path, 'r')
@@ -70,7 +71,7 @@ new_run_numbers = np.array([])
 
 # MFLI data variables
 mfli_data = {
-        'DEV3265':{
+        'dev3265':{
                 'x0': np.array([]),
                 'y0': np.array([]),
                 'x1': np.array([]),
@@ -84,7 +85,7 @@ mfli_data = {
                 's_x2': np.array([]),
                 's_y2': np.array([]),
                 'harmonic': np.array([]),},
-        'DEV3269':{
+        'dev3269':{
                 'x0': np.array([]),
                 'y0': np.array([]),
                 'x1': np.array([]),
@@ -117,7 +118,7 @@ for run in run_list:
         ldm_file = h5py.File(ldm_file_path + run_file, 'r')
         ldm_delay = np.append(ldm_delay, np.array(ldm_file['/photon_source/SeedLaser/trls_sl_03_pos']))
         ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_sh_a']))
-        ldm_l_fel = np.array(ldm_file['/photon_diagnostics/Spectrometer/Wavelength'])
+        ldm_l_fel = np.array(ldm_file['/photon_source/SeedLaser/Wavelength'])
         ldm_file.close()
     ldm_delay_m = np.append(ldm_delay_m, np.mean(ldm_delay) - delay_zero_pos)
     ldm_delay_s = np.append(ldm_delay_s, np.std(ldm_delay))
@@ -155,7 +156,7 @@ for run in run_list:
 
 if file_exists:
     if not new_run_numbers.size == 0:
-        print('run_numbers: {}'.format(new_run_numbers))
+#        print('run_numbers: {}'.format(new_run_numbers))
         analysis_file = h5py.File(analyse_path, 'a')
         # Append run_numbers
         analysis_file['run_numbers'].resize((analysis_file['run_numbers'].shape[0] + new_run_numbers.shape[0]), axis = 0)
@@ -176,8 +177,8 @@ if file_exists:
         ldm_group['s_I0'].resize((ldm_group['s_I0'].shape[0] + ldm_i0_s.shape[0]), axis = 0)
         ldm_group['s_I0'][-ldm_i0_s.shape[0]:] = ldm_i0_s
         # l_ref
-        ldm_group['l_fel'].resize((ldm_group['l_fel'].shape[0] + ldm_l_fel_m.shape[0]), axis = 0)
-        ldm_group['l_fel'][-ldm_l_fel_m.shape[0]:] = ldm_l_fel_m
+        ldm_group['l_seed'].resize((ldm_group['l_seed'].shape[0] + ldm_l_fel_m.shape[0]), axis = 0)
+        ldm_group['l_seed'][-ldm_l_fel_m.shape[0]:] = ldm_l_fel_m
 
         # Append MFLI data
         for mfli in mfli_name:
@@ -208,7 +209,7 @@ else:
     # Std I0
     ldm_group.create_dataset('s_I0', data=ldm_i0_s, maxshape=(None,))
     # l_ref
-    ldm_group.create_dataset('l_fel', data=ldm_l_fel_m, maxshape=(None,))
+    ldm_group.create_dataset('l_seed', data=ldm_l_fel_m, maxshape=(None,))
 
     # Run numbers
     analysis_file.create_dataset('run_numbers', data=new_run_numbers, maxshape=(None,))
@@ -220,7 +221,7 @@ else:
 
         # Append harmonic
         mfli_group.create_dataset('harmonic', data=mfli_device['harmonic'], maxshape=(None,))
-        
+
         for demod in range(3):
             # X values
             mfli_group.create_dataset('x' + str(demod), data=mfli_device['x' + str(demod)], maxshape=(None,))

@@ -42,7 +42,7 @@ def Curve(l_He, l_ref, h, phi, A, offset, start, stop, length):
     Ytd=offset+A*np.sin(2.*np.pi *c*plotRange*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
     X=offset+A*np.cos(2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
     Y=offset+A*np.sin(2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
-    return Xtd,Ytd,X,Y
+    return Xtd,-Ytd,X,-Y
 
 def CurveCreator(l_He,l_ref,h,phi,A, delay,pNoise,aNoise):
     "creates datapoints on cosine/sine curve with given parameters for frequency, ampliotude and phase. Phase noise and amplitude noise can be imparted."
@@ -322,7 +322,7 @@ def plot_spectrogram(fig, wn_lim, t_lim):
     ax.get_xaxis().set_tick_params(which='both',  length=5, width=1.5)
     for axis in ['top','bottom','left','right']:
         ax.spines[axis].set_linewidth(1.5)
-    #ax.axvspan(-overlap,overlap, color='grey', alpha=0.9)
+    #ax.axvspan(-overlap,overlap, color='grey', alpha=0.9)False
     ax.axhline(12816, linestyle='--', color='w', linewidth=lw)
     ax.axhline(12579, linestyle='--', color='w', linewidth=lw)
 #    ax.axhline(11685, linestyle='--', color='w', linewidth=lw)
