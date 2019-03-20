@@ -15,8 +15,9 @@ import h5py
 delay_zero_pos = 11025.66
 mfli_name = ['dev3265', 'dev3269']  # number of MFLI demodulator to be analyzed
 
-runs = [830, 1133]
-run_remove = [835, 1037] #[1153, 1161, 1178, 1205, 1206]
+runs = [4651, 5007]
+run_remove = [] #[3991] #3874] #[3367, 3368,3471,3472,3486,3485,3605,3606,3607,3608,3609,3610,3611,3612,3613] #[2386,2504,2505,2506,2507,2508,2509,2510,2511,2529] #[1575,1576,1577] #[1153, 1161, 1178, 1205, 1206]
+run_missing_i0 = [3044] # runs that are missing iom_sh_a
 
 run_list = range(runs[0], runs[1] + 1)
 for rr in run_remove:
@@ -117,7 +118,10 @@ for run in run_list:
     for run_file in os.listdir(ldm_file_path):
         ldm_file = h5py.File(ldm_file_path + run_file, 'r')
         ldm_delay = np.append(ldm_delay, np.array(ldm_file['/photon_source/SeedLaser/trls_sl_03_pos']))
-        ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_sh_a']))
+        if run in run_missing_i0:
+            ldm_i0 = np.zeros(ldm_delay.shape)
+        else:
+            ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_sh_a']))
         ldm_l_fel = np.array(ldm_file['/photon_source/SeedLaser/Wavelength'])
         ldm_file.close()
     ldm_delay_m = np.append(ldm_delay_m, np.mean(ldm_delay) - delay_zero_pos)
@@ -232,3 +236,5 @@ else:
 
 if not new_run_numbers.size == 0:
     analysis_file.close()
+
+execfile("c_file.py")

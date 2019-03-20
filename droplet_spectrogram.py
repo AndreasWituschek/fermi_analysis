@@ -26,7 +26,7 @@ import os
 
 #=========user inputs==========================================================
 script_acronym = 'es'
-init_dir = '\\\\10.5.71.1\\user\\Projekte\\2D-Spectro\\Data\\WPI-simple_PE_detector' 
+init_dir = '\\\\10.5.71.1\\user\\Projekte\\2D-Spectro\\Data\\WPI-simple_PE_detector'
 os.chdir('\\\\NANOSERVER\\Marcelb\\PhD-stuff\\DataAnalysisStuff\\Python\\Droplet\\RbHeN_dissociation_DPG18')
 data_window = [-3,3]   # which part of the interferogram should be considered in ps
 t_lim = [0,.6]
@@ -35,7 +35,7 @@ mono_calib = 13068.815  #calibrated mono value in cm^-1, if this is 0.0, sktript
 zero_delay = 0.0 # in ps
 slide_step = 0.01 # in ps
 FWHM = .150 # in ps
-t_desorbed = 1.8 
+t_desorbed = 1.8
 overlap = 4.0#0.8*4.65#4.65 # half width in ps
 clim = [0,0]#[0.0, 0.6E-14]   # limit of color range
 mono_corr = -0.19 # monochromator correction in nm: mono_actual = mono_scale + mono_corr
@@ -43,7 +43,7 @@ lw = 2 # linewidth in DFTs
 fs = 14 # font size for annotations
 Ham =1     # 1, 2, 3, 4te Harmonische, vorrausgesetzt LockIn 1 = Ham1,...
 
-#init_dir = '\\\\10.5.71.1\\user\\Projekte\\2D-Spectro\\Data\\WPI-simple_PE_detector' 
+#init_dir = '\\\\10.5.71.1\\user\\Projekte\\2D-Spectro\\Data\\WPI-simple_PE_detector'
 #os.chdir('\\\\10.5.71.1\\user\\Projekte\\2D-Spectro\\Data\\WPI-simple_PE_detector')
 #file_path = '\\\\nanoserver\\user\\Projekte\\2D-Spectro\\Data\\QMS_2014\\2014-10-02\\2014-10-02_Rb87He_QMS_776nm_8215A_1+2H.dat'
 file_path = '\\\\NANOSERVER\\Marcelb\\PhD-stuff\\DataAnalysisStuff\\Python\\Droplet\\RbHeN_dissociation_DPG18\\2017-08-07_1D_droplet_3.dat'
@@ -64,34 +64,34 @@ Offy = (1-Ry)/2.0   # Offset-Koordinate in %
 
 def import_report (keyword_substr, report_name):
     """
-    Searches for the first occurence of keyword_substr in report file and 
+    Searches for the first occurence of keyword_substr in report file and
     returns value associated with the corresponding keyword. If keyword_substr
     occures several times in the report file, only the value of first occurence
     is returned, no error will be thrown.
-    Function can't handle german vocals ä,ö,ü, in this case truncate 
+    Function can't handle german vocals ä,ö,ü, in this case truncate
     keyword_substr just before any of these characters.
     """
     report = np.genfromtxt(report_name+'.rpt', delimiter = ':', skip_header = \
     12 , usecols = (0,1), dtype=str)    # wichtig hier den dtype auf str festzulegen sonst macht genfromtxt probleme mit colum 2
-    keyword_list, values = report.T    
-    keyword_index = -1    
+    keyword_list, values = report.T
+    keyword_index = -1
     for i in np.arange(0, keyword_list.size):
         if string.find(keyword_list[i], keyword_substr) >= 0 :
             keyword_index = i
             break
     return float(values[keyword_index])
 
-def cut_dataset (T, X, Y, window):  
+def cut_dataset (T, X, Y, window):
     """
     new method!!!, 02.07.14
     """
-    # sort start,stop according to increasing/decreasing numbers in T    
+    # sort start,stop according to increasing/decreasing numbers in T
     if T[-1]>T[0]:
         start_user = min(window)
         stop_user = max(window)
     else :
         start_user = max(window)
-        stop_user = min(window) 
+        stop_user = min(window)
     # cut data
     lower_index = np.argmin(np.abs(T-start_user))
     upper_index = np.argmin(np.abs(T-stop_user))
@@ -99,18 +99,18 @@ def cut_dataset (T, X, Y, window):
     X = X[lower_index : upper_index]
     Y = Y[lower_index : upper_index]
     return (T,X,Y)
-   
+
 def round_sig(x, sig=2):
    return round(x, sig-int(floor(log10(x)))-1)
 
 def get_file_name (file_path):
     index = string.rfind(file_path, '/')
     return file_path[index+1:-4]    #truncate '.dat'
-    
+
 def get_export_folder (file_path):
-    index = string.rfind(file_path, '/')
+    index = string.rfind(file_path, '/')T_d
     return file_path[0:index]    #truncate '.dat'
-    
+
 def open_file (init_folder):
     # define Masterwindow/Canva and close hide it
     root = Tk()
@@ -119,7 +119,7 @@ def open_file (init_folder):
     file_path = askopenfilename(initialdir= init_dir, defaultextension='.dat') # returns complete file path
     #file_path = 'D://Dokumente//Diplomarbeit//2D-FT-Spectro//Data//WPI//07.03.13//WPI_07.03.13_6.dat'
     return file_path
-          
+
 def alkali_one_photon_wavenumbers():
     # Nist wavenumbers /cm^-1:
     wn_Rb_D1 = 12578.95
@@ -127,10 +127,10 @@ def alkali_one_photon_wavenumbers():
     wn_Rb_d3p = 12883.99    # 5pP_3/2 -> 5dD_3/2
     wn_Rb_d5p = 12886.95    # 5pP_3/2 -> 5dD_5/2
     wn_dict = {'Rb_D1': wn_Rb_D1, 'Rb_D2': wn_Rb_D2, \
-    'Rb_d3p': wn_Rb_d3p, 'Rb_d5p': wn_Rb_d5p}   
+    'Rb_d3p': wn_Rb_d3p, 'Rb_d5p': wn_Rb_d5p}
     return wn_dict
-           
-def mono_frequency(lambda_M):    
+
+def mono_frequency(lambda_M):
     # diffraction index for lambda_M (formula Zula SabrinaL)
     lambda_M = lambda_M*10**-9  # conversion to meter
     n = 1 + \
@@ -146,7 +146,7 @@ def data_mirrow_extend(T,X,Y):
     X_neg = X[::-1]
     X= np.append(X_neg, X)
     Y_neg = -Y[::-1]
-    Y= np.append(Y_neg, Y) 
+    Y= np.append(Y_neg, Y)
     Z = X +1j*Y
     return T, Z
 
@@ -163,19 +163,19 @@ def import_data2():    # import data of two lock-ins
     stop = import_report('Endposition', file_path[:-4])   #in fs
     step = import_report('Schrittweite', file_path[:-4])   #in fs
     amp_1 = import_report('Lock-In_1 Amplification', file_path[:-4])
-    sensitivity_1 = import_report('Lock-In_1 Sensitivity', file_path[:-4])
+    sensitivity_1 = import_report('Lock-In_1 T_dSensitivity', file_path[:-4])
     amp_2 = import_report('Lock-In_2 Amplification', file_path[:-4])
     sensitivity_2 = import_report('Lock-In_2 Sensitivity', file_path[:-4])
     lambda_L = import_report('Chameleon Spektrum', file_path[:-4])
     wn_L = 10**7/lambda_L   # wavenumbers in cm^-1
     lambda_M_scale = import_report('Monochromator Wavelength', file_path[:-4])
     #lambda_M_corr = import_report('Monochromator Correction', file_path[:-4])
-    print 'laser=' + str(lambda_L) +' - ' + file_name + '\n'    
+    print 'laser=' + str(lambda_L) +' - ' + file_name + '\n'
     lambda_M_corr = mono_corr
     #Prepare Data==================================================================
     # converting wavelength to actual air wavelength
     lambda_M = lambda_M_scale*1.004-49.872 + lambda_M_corr  # Eichung vom 22.01.14
-    freq_Mono = mono_frequency(lambda_M)    # in Hz    
+    freq_Mono = mono_frequency(lambda_M)    # in Hz
     wn_M = Ham*freq_Mono/100.0/const.c # wavenumbers in cm^-1
     # scaling signal, neglecting 2Ham signal
     X1 *= sensitivity_1/amp_1/10.0  # orignial signal magnitude in Volts
@@ -189,29 +189,29 @@ def import_data2():    # import data of two lock-ins
     Z1 = X1
     Z2 = X2 + 1j*Y2
     para_dict = {'start' : start, 'stop' : stop, 'step' : step, 'lambda_L' : lambda_L, \
-    'wn_L' : wn_L, 'lambda_M' : lambda_M, 'wn_M' : wn_M, 'title' : title}    
+    'wn_L' : wn_L, 'lambda_M' : lambda_M, 'wn_M' : wn_M, 'title' : title}
     return T1, Z1, Z2, para_dict
 
 def slide_window(T, Z, t_center, FWHM):
-    # multiplies a gaussion onto the dataset and returns the data set of the whole range of T    
+    # multiplies a gaussion onto the dataset and returns the data set of the whole range of T
     # T, t_center, FWHM in ps
     # Z may be complex
     return Z*sp.exp(-4*sp.log(2)*((T-t_center)/FWHM)**2)
-    
+
 def weighting_coeff(t, t_center, FWHM): # calculates amplitude of gaussian at time t
     return sp.exp(-4*sp.log(2)*((t-t_center)/FWHM)**2)
 
 def zero_padding(T):
     n = int(round(np.log2(T.size)+0.5))  #potenz um datensatz auf nächste 2^N zu erweitern
     n += 1  # falls zero-padding erwünscht
-    N = 2**n    # Anzahl Datenpunkte auf die zur Not mit Zero-Padding aufgefüllt wird  
+    N = 2**n    # Anzahl Datenpunkte auf die zur Not mit Zero-Padding aufgefüllt wird
     return N
-    
+
 def redistribute(array, index):
     array_neg = array[index:]
     array_pos = array[0:index]
     return np.concatenate((array_neg,array_pos))
-    
+
 def plotbar():
     ##cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
     #cax = fig.add_axes([0.85, 0.1, 0.2, 0.8])
@@ -220,7 +220,7 @@ def plotbar():
     #cax.patch.set_alpha(0)
     #cax.set_frame_on(False)
     plt.colorbar(orientation='vertical')
-    
+
 def annotate():
     ax = plt.gca()
     ax.axvline(para_dict['wn_M'] , linestyle='--', color = 'w', linewidth=lw)
@@ -228,7 +228,7 @@ def annotate():
     ax.axhline(zero_delay , linestyle='--', color = 'w', linewidth=lw)
     ax.axvline(12883.99 , linestyle='--', color = '#888888', linewidth=lw)
     ax.axvline(12886.95 , linestyle='--', color = '#888888', linewidth=lw)
-    
+
 def plot_spectrogram(fig, wn_lim, t_lim):
     ax = fig.add_axes([Offx, Offy, Rsubx, 2*Rsuby])  # define current axes
     xmin_index = np.argmin(abs(wn-wn_lim[0]))
@@ -245,7 +245,7 @@ def plot_spectrogram(fig, wn_lim, t_lim):
     ax.get_xaxis().get_major_formatter().set_useOffset(False)
     ax.get_xaxis().set_tick_params(which='both', direction='out', pad=-5, length=5, width=1.5)
     ax.get_yaxis().set_tick_params(which='both', direction='out', pad=-5, length=5, width=1.5)
-    ax.get_xaxis().tick_bottom()   # remove unneeded ticks 
+    ax.get_xaxis().tick_bottom()   # remove unneeded ticks
     ax.get_yaxis().tick_left()
     ax.get_yaxis().set_tick_params(which='both', length=5, width=1.5)
     ax.get_xaxis().set_tick_params(which='both',  length=5, width=1.5)
@@ -258,7 +258,7 @@ def plot_spectrogram(fig, wn_lim, t_lim):
 
     #annotate()
     #plotbar()
-    
+
 def find_index(array, value):
     return np.argmin(abs(array-value))
 
@@ -285,11 +285,11 @@ N = zero_padding(T)
 freq = fftpack.fftfreq(N, d = para_dict['step']*10**(-15))  # frequency axes in Hz
 if para_dict['step']<0:
     freq = freq[::-1]   # reverse array
-wn = freq/100.0/const.c + para_dict['wn_M'] # measured wavenumbers in cm^-1 
+wn = freq/100.0/const.c + para_dict['wn_M'] # measured wavenumbers in cm^-1
 cut_index = np.argmin(wn)
 wn = redistribute(wn, cut_index)
 # create spectrogram-matrix
-S = np.zeros((np.size(T), np.size(wn))) 
+S = np.zeros((np.size(T), np.size(wn)))
 # calculate start position
 data_window[0] /= 1000.0   # back to ps
 data_window[1] /= 1000.0   # back to ps
@@ -297,10 +297,10 @@ HWFP = sp.sqrt(3.0/sp.log(2))*FWHM/2.0 # half width where gaussian has dropped t
 slide_pos = data_window[0] - HWFP
 n=0
 
-while slide_pos <= data_window[1] + HWFP : 
+while slide_pos <= data_window[1] + HWFP :
     Z_slide = slide_window(T, Z, slide_pos, FWHM)    # multiply gaussian onto data set which is centered at current sliding position
-    DFT_slide = redistribute(abs(fftpack.fft(Z_slide, n=N)),cut_index)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian 
-    n+=1 
+    DFT_slide = redistribute(abs(fftpack.fft(Z_slide, n=N)),cut_index)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
+    n+=1
     if para_dict['step']<0:
         DFT_slide = DFT_slide[::-1] # reverse array
     # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
@@ -346,7 +346,7 @@ ax3.set_yticklabels([])
 ax3.tick_params(labelsize=fs)
 ax3.get_yaxis().set_tick_params(which='both', length=5, width=1.5)
 ax3.get_xaxis().set_tick_params(which='both', length=5, width=1.5)
-ax3.get_xaxis().tick_bottom()   # remove unneeded ticks 
+ax3.get_xaxis().tick_bottom()   # remove unneeded ticks
 ax3.set_yticks([])
 ticks = ax3.xaxis.get_major_ticks()
 #xticks[0].label1.set_visible(False)

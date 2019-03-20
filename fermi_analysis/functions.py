@@ -38,11 +38,11 @@ def Curve(l_He, l_ref, h, phi, A, offset, start, stop, length):
     points=30000 # number of TD points for plotting of theroetical curve
     plotRange = np.linspace(start-10,stop+10,points)
     tau = np.linspace(start,stop,length)
-    Xtd=offset+A*np.cos(2.*np.pi *c*plotRange*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
-    Ytd=offset+A*np.sin(2.*np.pi *c*plotRange*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
-    X=offset+A*np.cos(2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
-    Y=offset+A*np.sin(2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
-    return Xtd,-Ytd,X,-Y
+    Xtd=offset+A*np.cos(-2.*np.pi *c*plotRange*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
+    Ytd=offset+A*np.sin(-2.*np.pi *c*plotRange*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
+    X=offset+A*np.cos(-2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
+    Y=offset+A*np.sin(-2.*np.pi *c*tau*(h*l_He-l_ref)/(l_ref*l_He) + phi/180.0*np.pi)
+    return Xtd,Ytd,X,Y
 
 def CurveCreator(l_He,l_ref,h,phi,A, delay,pNoise,aNoise):
     "creates datapoints on cosine/sine curve with given parameters for frequency, ampliotude and phase. Phase noise and amplitude noise can be imparted."
@@ -231,7 +231,7 @@ def GaussWindow(T, X, suscept):
     start = T[0]
     stop = T[-1]
     if suscept:
-        mu = stop
+        mu = 0.0
         std = 2*(abs(stop-start))/sp.sqrt(48)  # so Gaussian will be dropped to 5% (e.g. 1/e^3) at edges of dataset
     else:
         mu = (stop+start)/2
@@ -286,9 +286,9 @@ def DFT(T, Z, dT, l_ref, harmonic, zeroPaddingFactor):
     if step < 0:
         DFT = DFT[::-1]   # reverse array
     # correct for delay offset error
-#    offset = T[find_index(T,0.0)]*10**(-15)   # in s
-#    phaseCorrection = np.array([np.exp(-1j*2*np.pi*f*offset) for f in freq])
-#    DFT *= phaseCorrection
+    offset = T[find_index(T,0.0)]*10**(-15)   # in s
+    phaseCorrection = np.array([np.exp(-1j*2*np.pi*f*offset) for f in freq])
+    DFT *= phaseCorrection
     return wn, DFT
 
 def slide_window(T, Z, t_center, FWHM):
@@ -300,16 +300,18 @@ def slide_window(T, Z, t_center, FWHM):
 def weighting_coeff(t, t_center, FWHM): # calculates amplitude of gaussian at time t
     return sp.exp(-4*sp.log(2)*((t-t_center)/FWHM)**2)
 
-def plot_spectrogram(fig, wn_lim, t_lim):
-    ax = fig.add_axes([Offx, Offy, Rsubx, 2*Rsuby])  # define current axes
+def plot_spectrogram(fig, wn, T, S, l_fel, wn_lim, t_lim):
+    fs = 15
+    lw = 2
+    ax = fig.add_subplot(111)  # define current axes
     xmin_index = np.argmin(abs(wn-wn_lim[0]))
     xmax_index = np.argmin(abs(wn-wn_lim[1]))
     tmin_index = np.argmin(abs(T-t_lim[0]))
     tmax_index = np.argmin(abs(T-t_lim[1]))
-    clim= [0.0, 0.1*S.max()] # 0.65
-    plt.imshow(S.transpose()[xmin_index:xmax_index, tmin_index:tmax_index], clim=clim, origin='lower', aspect='auto', extent=[T[tmin_index],T[tmax_index], wn[xmin_index],wn[xmax_index]])
+    clim= [0.0, 1.0*S.max()] # 0.65
+    ax.imshow(S.transpose()[xmin_index:xmax_index, tmin_index:tmax_index], clim=clim, origin='lower', aspect='auto', extent=[T[tmin_index],T[tmax_index], wn[xmin_index],wn[xmax_index]])
     ax.set_ylabel('frequency (cm$^{-1}$)', fontsize = fs)
-    ax.set_xlabel('pump-probe delay (ps)', fontsize = fs)
+    ax.set_xlabel('pump-probe delay (fs)', fontsize = fs)
     ax.tick_params(labelsize=fs)
     locs, labels = plt.yticks()
     plt.setp(labels, rotation=90)
@@ -322,22 +324,21 @@ def plot_spectrogram(fig, wn_lim, t_lim):
     ax.get_xaxis().set_tick_params(which='both',  length=5, width=1.5)
     for axis in ['top','bottom','left','right']:
         ax.spines[axis].set_linewidth(1.5)
-    #ax.axvspan(-overlap,overlap, color='grey', alpha=0.9)False
-    ax.axhline(12816, linestyle='--', color='w', linewidth=lw)
-    ax.axhline(12579, linestyle='--', color='w', linewidth=lw)
-#    ax.axhline(11685, linestyle='--', color='w', linewidth=lw)
-    ax.axhline(mono_calib, linestyle='--', color='k', linewidth=lw)
+    #ax.axvspan(-overlap,overlap, color='grey', alpha=0.9)
+    ax.axhline(191502., linestyle='--', color='w', linewidth=lw)# He atom line
+    ax.axhline(5E7/l_fel, linestyle='-', color='w', linewidth=lw)# He atom line
     ax.set_xlim(t_lim[0], t_lim[1])
 #    ax.text(0.9, 0.9, '(b)', transform=ax.transAxes, ha='left', fontweight='bold',fontsize = 22, color='w')
 
     #annotate()
-    plotbar()
+    #plotbar()
+
 
 def PeakWidth(T, peakMargin, suscept, zeroPaddingFactor):
     """
     Calculates the FWHM of spectral peaks as well as the full width at which
     spectral peaks will be dropped to peakMargin (fraction of peak maximum)
-    of their amplitude. For this purpose a simulated perfect cosine signal is
+    of their amplitude. For this purpose a simuTruelated perfect cosine signal is
     Fourier transformed with Gaußian window and zero padding and its FWHM and
     peak margin (peakWidth) is measured and returned.
     """
