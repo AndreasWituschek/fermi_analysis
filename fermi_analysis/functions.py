@@ -298,7 +298,9 @@ def slide_window(T, Z, t_center, FWHM):
     return Z*sp.exp(-4*sp.log(2)*((T-t_center)/FWHM)**2)
 
 def weighting_coeff(t, t_center, FWHM): # calculates amplitude of gaussian at time t
-    return sp.exp(-4*sp.log(2)*((t-t_center)/FWHM)**2)
+    gauss_window = sp.exp(-4*sp.log(2)*((t-t_center)/FWHM)**2)
+    rect_window = np.where(abs(gauss_window)<=0.5,1,0)
+    return gauss_window
 
 def plot_spectrogram(fig, wn, T, S, l_fel, wn_lim, t_lim):
     fs = 15

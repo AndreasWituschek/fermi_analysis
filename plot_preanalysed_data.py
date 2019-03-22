@@ -14,34 +14,34 @@ import scipy.constants as spc
 
 
 """ Data parameters """
-run = 4651 #first run of delay scan
-demod = ['1']
-#device = ['dev3269']
+run = 6227 #first run of delay scan
+#demod = ['0']
+#device = ['dev3265']
 demod = ['0','1', '2']
 device = ['dev3265', 'dev3269']
 root_file_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/combined/'
-interactive_plots = True
-save_fig = False
+interactive_plots = 1
+save_fig = 1
 plotTheo = False
-spectrogram = False
+spectrogram = 0
 
 """Experimental Parameters"""
 # parameters for theoretical curve
-#l_trans = 52.2186  # helium 1s-4p transition in nm
+l_trans = 52.2186  # helium 1s-4p transition in nm
 l_trans = 260.92/6.0 # fanoresonance in argon
 l_ref = 266.023 #265.98  # reference laser wavelenght in nm
-fwhm_FEL = 0.046 # FEL fwhm, used for calculation of FEL spectrum
+fwhm_FEL = 0.075 # FEL fwhm, used for calculation of FEL spectrum
 harmonic = 6.  # harmonic of FEL
 delay_zero_pos = 11025.66
 title = 'Comparison'
 color = 'r'
-data_window = [-600,70] #[-200,370]
-gauss = 0 # gauss window on TD (true) or not (False)
+data_window = [-100.0,25.0] #[-200,370]
+gauss = 1 # gauss window on TD (true) or not (False)
 
 """ Parameters for theoretical curve """
 phi =0.#-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
 A = 1.  # amplitude (=R from MFLI)
-a = .5   # amplitude scaling factor
+a = 1.   # amplitude scaling factor
 offset = 0.  # offset
 
 """ analysis parameters """
@@ -50,6 +50,8 @@ FWHM_slide = slide_step / np.sqrt(48)
 zeroPaddingFactor = 2
 suscept = False
 wn_lim = [217100,233800]
+#wn_lim = [180000,197000]
+#wn_lim = [189800,193100]
 
 # Load preanalysed data
 file_path = root_file_path + 'scan_{0:03}/'.format(int(run))
@@ -98,7 +100,8 @@ data = {
 h5f.close()
 l_fel = data['LDM']['l_seed'][0]
 #l_fel = 262.2
-l_fel = 43.40*harmonic
+l_fel = 43.46*harmonic
+l_fel = 261.0726087 #261.7 #261.0726087
 print l_fel
 T = data['LDM']['delay']
 #data_window = [T[0]-5, T[-1]+5]
@@ -108,7 +111,7 @@ T = data['LDM']['delay']
 ''' laser spectrum '''
 points = np.linspace(wn_lim[0],wn_lim[1],1000)
 fwhm_FEL_wn = 1E7*(fwhm_FEL/(l_fel/harmonic)**2) # wavenumber FWHM of FEL
-l_FEL = 1E7/l_fel # wavenumber CWL of FEL
+l_FEL = 1E7/l_fel # wavenumber CWL of FE FalseL
 
 ''' Fano resonance simulation '''
 Ttheo = np.linspace(data_window[0],data_window[1],1000)
@@ -126,12 +129,13 @@ for dev in device:
     for d in demod:
         mfli_harmonic = data[dev]['harmonic'][int(d)]
         i = str(mfli_harmonic) + 'H'
-        Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d]) #/ data['LDM']['I0']
+        Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d])# / data['LDM']['I0']
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
 
         R = np.sqrt(Z.real**2 + Z.imag**2)
         R_s = np.sqrt(Z_s.real**2 + Z_s.imag**2)
         Phi = np.angle(Z, deg=False)
+
 
 # Create theoretical curve
 #        if draw_theory:
@@ -235,23 +239,25 @@ for dev in device:
             # plot spec
             figFT = plt.figure('scan_{0:03}_{1}_d{2}_SG_{3}'.format(run, dev, d, i))
             print(T_d[0], T_d[-1])
-            slide_step = 2.0  #in fs
+            slide_step = Td  #in fs
             FWHM_slide = 20.0  #in fs
             t_lim = data_window
             slide_positions = np.arange(T_d[0],T_d[-1], slide_step)
             S = np.zeros((np.size(T_d), np.size(wn)))
+            i = 0
             for slide_pos in slide_positions:
                 Z_slide = fk.slide_window(T_d, Z, slide_pos, FWHM_slide)    # multiply gaussian onto data set which is centered at current sliding position
                 wn,  DFT_slide = fk.DFT(T_d, Z_slide, Td, l_ref , harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
                 # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
-                for i in range(np.size(T_d)):
-                    S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))*fk.weighting_coeff(T_d[i], slide_pos, FWHM_slide)
+#                for i in range(np.size(T_d)):
+#                    S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))*fk.weighting_coeff(T_d[i], slide_pos, FWHM_slide)
+                S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))
+                i += 1
             S[:,:] /= np.size(slide_positions)
             fk.plot_spectrogram(figFT, wn, T_d, S, l_fel, wn_lim, t_lim)
-            plt.show()
+#            plt.show()
 
 if not interactive_plots:
-    pass
-#    plt.close('all')
+    plt.close('all')
 else:
     plt.show()
