@@ -13,6 +13,7 @@ import scipy.constants as spc
 from scipy import optimize
 from scipy import fftpack
 import h5py
+import os
 
 #physical constants:
 c = spc.speed_of_light / 1000000.0  # speed of light in nm/fs
@@ -56,7 +57,7 @@ def CurveCreator(l_He,l_ref,h,phi,A, delay,pNoise,aNoise):
     return X,Y
 
 def PlotCurve(X,Y,start, stop):
-    points=30000 # number of TD points for plotting of theroetical curve
+    points=100000 # number of TD points for plotting of theroetical curve
     plotRange = np.linspace(start-10,stop+10,points)
     plt.plot(plotRange,X,'b--', label="theoretical curve demodX")
     plt.plot(plotRange,Y, 'r--', label="theoretical curve demodY")
@@ -219,7 +220,7 @@ def AveragingMfliData(mfli_data,I0,apply_filter,I0_threshold,modfreq_set,modfreq
 def DelayMove(delay_pos):
     if all(x == delay_pos[0] for x in delay_pos):
         delay_pos=delay_pos[0]
-    else: print "Delaystage moved during run!"
+    else: print("Delaystage moved during run!")
 
 def GaussWindow(T, X, suscept):
     """
@@ -258,7 +259,7 @@ def CutDataSet(T, X, Y, data_window):
         stop_user = min(data_window)
     # cut data
     lower_index = np.argmin(np.abs(T-start_user))
-    upper_index = np.argmin(np.abs(T-stop_user))
+    upper_index = np.argmin(np.abs(T-stop_user))+1
     T = T[lower_index : upper_index]
     X = X[lower_index : upper_index]
     Y = Y[lower_index : upper_index]
@@ -271,7 +272,8 @@ def DFT(T, Z, dT, l_ref, harmonic, zeroPaddingFactor):
     axis. Returns wavenumber array and complex valued DFT.
     """
     step = dT
-    wn_Mono = 10**7/l_ref
+
+    wn_Mono = 1E7/l_ref
     # determine zero padding
     N = zero_padding(T, zeroPaddingFactor)
     # calculate wavenumber axis
@@ -286,9 +288,9 @@ def DFT(T, Z, dT, l_ref, harmonic, zeroPaddingFactor):
     if step < 0:
         DFT = DFT[::-1]   # reverse array
     # correct for delay offset error
-    offset = T[find_index(T,0.0)]*10**(-15)   # in s
-    phaseCorrection = np.array([np.exp(-1j*2*np.pi*f*offset) for f in freq])
-    DFT *= phaseCorrection
+#    offset = T[find_index(T,0.0)]*10**(-15)   # in s
+#    phaseCorrection = np.array([np.exp(-1j*2*np.pi*f*offset) for f in freq])
+#    DFT *= phaseCorrection
     return wn, DFT
 
 def slide_window(T, Z, t_center, FWHM):
@@ -302,7 +304,7 @@ def weighting_coeff(t, t_center, FWHM): # calculates amplitude of gaussian at ti
     rect_window = np.where(abs(gauss_window)<=0.5,1,0)
     return gauss_window
 
-def plot_spectrogram(fig, wn, T, S, l_fel, wn_lim, t_lim):
+def plot_spectrogram(fig, wn, T, S, l_fel,l_trans, wn_lim, t_lim):
     fs = 15
     lw = 2
     ax = fig.add_subplot(111)  # define current axes
@@ -312,8 +314,8 @@ def plot_spectrogram(fig, wn, T, S, l_fel, wn_lim, t_lim):
     tmax_index = np.argmin(abs(T-t_lim[1]))
     clim= [0.0, 1.0*S.max()] # 0.65
     ax.imshow(S.transpose()[xmin_index:xmax_index, tmin_index:tmax_index], clim=clim, origin='lower', aspect='auto', extent=[T[tmin_index],T[tmax_index], wn[xmin_index],wn[xmax_index]])
-    ax.set_ylabel('frequency (cm$^{-1}$)', fontsize = fs)
-    ax.set_xlabel('pump-probe delay (fs)', fontsize = fs)
+    ax.set_ylabel('frequency [cm$^{-1}$]', fontsize = fs)
+    ax.set_xlabel('delay [fs]', fontsize = fs)
     ax.tick_params(labelsize=fs)
     locs, labels = plt.yticks()
     plt.setp(labels, rotation=90)
@@ -327,8 +329,9 @@ def plot_spectrogram(fig, wn, T, S, l_fel, wn_lim, t_lim):
     for axis in ['top','bottom','left','right']:
         ax.spines[axis].set_linewidth(1.5)
     #ax.axvspan(-overlap,overlap, color='grey', alpha=0.9)
-    ax.axhline(191502., linestyle='--', color='w', linewidth=lw)# He atom line
-    ax.axhline(5E7/l_fel, linestyle='-', color='w', linewidth=lw)# He atom line
+    ax.axhline(1E7/l_trans, linestyle='--', color='grey', linewidth=lw)# He atom line
+#    ax.axhline(1E7/l_fel, linestyle='-', color='grey', linewidth=lw)# Laser frequency
+    ax.legend([r'He $1s\rightarrow 4p$ ','wn_fel'])
     ax.set_xlim(t_lim[0], t_lim[1])
 #    ax.text(0.9, 0.9, '(b)', transform=ax.transAxes, ha='left', fontweight='bold',fontsize = 22, color='w')
 
@@ -350,6 +353,9 @@ def PeakWidth(T, peakMargin, suscept, zeroPaddingFactor):
     w = 2*np.pi*1/(20*step)   # choose frequency factor 10 below nyquist
 #    paras = {'Schrittweite' : step, 'Monochromator Wavenumber' : 0 }
     sim = np.exp(1j*w*T)    # define simulated signal as in-phase + 1j*in-quad
+    if suscept:
+        phase_corr = np.exp(-1j*T[find_index(np.array(T),0)]*w) #phase correction of data to take into account zero delay shifts
+        sim *= phase_corr
     sim = GaussWindow(T, sim, suscept)
     wn, dft = DFT(T, sim, step, 1, 1, zeroPaddingFactor)
     if suscept:
@@ -359,15 +365,15 @@ def PeakWidth(T, peakMargin, suscept, zeroPaddingFactor):
     # normalize dft to 1
     dft /= dft.max()
     wnFitted, fFitted, fitParas = PeakFit("simulation", 1.0, wn, dft, np.abs(wn[-1]-wn[0]), 0.)
-
     # determine peak width of simulated signal
     peakFullWidth = abs(wn[findPeakIndexes(dft, peakMargin)[1]]-wn[findPeakIndexes(dft, peakMargin)[2]])
-#    FWHM = abs(wn[findPeakIndexes(dft, 0.5)[1]]-wn[findPeakIndexes(dft, 0.5)[2]])
+    FWHM = abs(wn[findPeakIndexes(dft, 0.5)[1]]-wn[findPeakIndexes(dft, 0.5)[2]])
     # calculate widths from theoretical derivation of gaussian window width
 #    delta = length*np.sqrt(np.log(2)/3)
 #    FWHM = 8.0*np.log(2.0)/delta# FWHM of Gaussian Window
 #    peakFullWidth = 4*np.sqrt(-np.log(2)*np.log(peakMargin))/delta
-    return fitParas['FWHM'], peakFullWidth
+    return FWHM, peakFullWidth
+
 
 def findPeakIndexes(Y, peakMargin):
     """
@@ -479,3 +485,101 @@ def round_sig(x, sig):
 
 def gaus(x,a,x0,sigma):
     return a*np.exp(-(x-x0)**2/(2*sigma**2))
+    
+    
+def fano(E, E_r,q, gamma, amp,offs):
+    epsilon = 2.*(E-E_r)/gamma
+    return offs+amp*(q + epsilon)**2./(epsilon**2.+1.)
+    
+def Phasing_TD(data,data_window,E_trans):
+    phase_corr = np.exp(-1j*data_window[find_index(np.array(data_window),0)]*1e-15*E_trans*spc.e/spc.hbar)
+    data *= phase_corr
+    return data
+    
+def ImportPadresRun30():
+    """
+    Imports Padres spectrum from Run30 and converts it into eV scale to plot it into Scan31 FD data
+    """
+    padres_spec = [] #padres spectrum of all harmonics(5,7,10)
+    padres_roi = []  #padres spectrum for all harmonics(5,7,10)
+    
+    ''' Loop over all harmonics '''
+    ldm_file_path ='//10.5.71.28/FermiServer/Beamtime2/Run_030/rawdata/'
+    ldm_files = os.listdir(ldm_file_path)
+    
+    ldm_padres = np.array([]) #raw padres spectrum from ldm files
+    padres = np.zeros((0, 1000))#padres spectrum    
+      
+    for ldm_file in ldm_files:
+        ldm_data = h5py.File(ldm_file_path + ldm_file, 'r')
+        #padres spectrum
+        ldm_padres = np.array(ldm_data['photon_diagnostics']['Spectrometer']['hor_spectrum'])
+        padres = np.append(padres, ldm_padres,axis=0) 
+        #padres spectrometer metadata
+        padres_wavelength = np.array(ldm_data['photon_diagnostics']['Spectrometer']['Wavelength'])
+        padres_span = np.array(ldm_data['photon_diagnostics']['Spectrometer']['WavelengthSpan'])
+        padres_pixel2micron = np.array(ldm_data['photon_diagnostics']['Spectrometer']['Pixel2micron'])
+    
+    padres_lambda = padres_wavelength + (np.arange(1,1001)-500)*padres_pixel2micron*1E-3*padres_span #padres spectrometer calibration
+    padres_spec.append(padres)
+    padres_roi.append(padres_lambda)
+       
+    ''' Proper Data windows for 5H '''
+    padres_low=100
+    padres_high=310
+    padres_spec_5H = np.transpose(padres_spec[0])[padres_low:padres_high,::]
+    padres_spec_5H = np.mean(padres_spec_5H,axis=1)
+    padres_roi_5H = padres_roi[0][padres_low:padres_high]
+    padres_roi_5H = spc.h*spc.c*1e9/(padres_roi_5H*spc.e)#
+    padres_spec_5H *= padres_roi_5H**2
+    padres_spec_5H = (padres_spec_5H-min(padres_spec_5H))/max(abs(padres_spec_5H-min(padres_spec_5H)))
+    return padres_roi_5H, padres_spec_5H
+
+def ImportPreanalysedData(root_file_path,run):
+    file_path = root_file_path + 'scan_{0:03}/'.format(int(run))
+    h5f = h5py.File(file_path + 'scan_{0:03}.h5'.format(int(run)), 'r')
+    
+    # sort data by delay in ascending order
+    sort_inds = np.array(h5f.get('LDM/delay')).argsort()
+    
+    data = {
+        'run_numbers': np.array(h5f.get('run_numbers'))[sort_inds],
+        'LDM': {
+            'I0': np.array(h5f.get('LDM/I0'))[sort_inds],
+            's_I0': np.array(h5f.get('LDM/s_I0'))[sort_inds],
+            'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
+            's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
+            'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
+            'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
+            'i0_fft': np.array(h5f.get('LDM/i0_fft'))[sort_inds]            
+                },
+        'dev3265': {
+            'harmonic': np.array(h5f.get('dev3265/harmonic')),
+            'x0': np.array(h5f.get('dev3265/x0'))[sort_inds],
+            'y0': np.array(h5f.get('dev3265/y0'))[sort_inds],
+            'x1': np.array(h5f.get('dev3265/x1'))[sort_inds],
+            'y1': np.array(h5f.get('dev3265/y1'))[sort_inds],
+            'x2': np.array(h5f.get('dev3265/x2'))[sort_inds],
+            'y2': np.array(h5f.get('dev3265/y2'))[sort_inds],
+            's_x0': np.array(h5f.get('dev3265/s_x0'))[sort_inds],
+            's_y0': np.array(h5f.get('dev3265/s_y0'))[sort_inds],
+            's_x1': np.array(h5f.get('dev3265/s_x1'))[sort_inds],
+            's_y1': np.array(h5f.get('dev3265/s_y1'))[sort_inds],
+            's_x2': np.array(h5f.get('dev3265/s_x2'))[sort_inds],
+            's_y2': np.array(h5f.get('dev3265/s_y2'))[sort_inds], },
+        'dev3269': {
+            'harmonic': np.array(h5f.get('dev3269/harmonic')),
+            'x0': np.array(h5f.get('dev3269/x0'))[sort_inds],
+            'y0': np.array(h5f.get('dev3269/y0'))[sort_inds],
+            'x1': np.array(h5f.get('dev3269/x1'))[sort_inds],
+            'y1': np.array(h5f.get('dev3269/y1'))[sort_inds],
+            'x2': np.array(h5f.get('dev3269/x2'))[sort_inds],
+            'y2': np.array(h5f.get('dev3269/y2'))[sort_inds],
+            's_x0': np.array(h5f.get('dev3269/s_x0'))[sort_inds],
+            's_y0': np.array(h5f.get('dev3269/s_y0'))[sort_inds],
+            's_x1': np.array(h5f.get('dev3269/s_x1'))[sort_inds],
+            's_y1': np.array(h5f.get('dev3269/s_y1'))[sort_inds],
+            's_x2': np.array(h5f.get('dev3269/s_x2'))[sort_inds],
+            's_y2': np.array(h5f.get('dev3269/s_y2'))[sort_inds], }, }
+    h5f.close()
+    return data

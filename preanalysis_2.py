@@ -15,11 +15,11 @@ import h5py
 delay_zero_pos = 11025.66
 mfli_name = ['DEV3265', 'DEV3269']  # number of MFLI demodulator to be analyzed
 
-runs = [1367, 1434]
+runs = [31, 707]
 
 run_list = range(runs[0], runs[1] + 1)
 
-run_remove = [1385, 1387, 1413, 1420]
+run_remove = [226, 227, 292, 293, 294, 308, 1385, 1387, 1413, 1420]
 for rr in run_remove:
     run_list.remove(rr)
 
@@ -30,8 +30,8 @@ cut_frac = 0.2   # constant fraction of data points cut from MFLI data vector, s
 analyse_path = 'C:/Users/FemtoMeasure/Desktop/HeDroplets/'
 analyse_path += 'scan_{}/'.format(runs[0])
 
-
-root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_4/'
+root_path = '//10.5.71.28/fermiserver/beamtime2/'
+#root_path = '//online4ldm.esce.elettra.trieste.it/store/20149020/Day_4/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_4/'
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late/scan_1834
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late
@@ -210,4 +210,4 @@ else:
 
 analysis_file.close()
 
-plt.plot(ldm_delay_m)
+#plt.plot(ldm_delay_m)

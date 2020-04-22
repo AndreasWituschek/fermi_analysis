@@ -12,25 +12,32 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import scipy.constants as spc
 
+import matplotlib.style
+import matplotlib as mpl
+mpl.style.use('classic')
+
+
 #plt.close('all')
 """ Data parameters """
-run = 793 #first run of delay scan
-demod = ['0']
+run = 1283 #first run of delay scan
+demod = ['1']
 device = ['dev3265']
 #demod = ['0','1', '2']
 #device = ['dev3265', 'dev3269']
 #root_file_path = '//10.5.71.28/FermiServer/Beamtime2/combined/'
-root_file_path = '//10.5.71.1/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/combined/'
+root_file_path = '//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime1/combined/'
+
 interactive_plots = 1
 save_fig = 0
 plotTheo = 1
 spectrogram = 0
 plot_eV = 1
-plot_l_ref = 0
+plot_l_ref = 1
 
 """Experimental Parameters"""
 # parameters for theoretical curve
-l_trans = 52.2186  # helium 1s-4p transition in nm 
+E_r = 23.74207019 # helium 1s-4p transition in eV 
+l_trans =  spc.h*spc.c/(E_r*spc.e)*1e9  # helium 1s-4p transition in nm 
 #l_trans = 260.92/6.0 # fanoresonance in argon
 #l_ref = 266.0234244226323  #265.98  # reference laser wavelenght in nm
 fwhm_FEL = 0.075 # FEL fwhm, used for calculation of FEL spectrum
@@ -38,11 +45,24 @@ harmonic = 5.  # harmonic of FEL
 delay_zero_pos = 11025.66
 title = 'Scan_{0:03}/'.format(int(run))
 color = 'b'
-data_window = [300.,320.0] #[-200,370]
-gauss = 1 # gauss window on TD (true) or not (False)
+data_window = [-290.,-210.0] 
+gauss = 0 # gauss window on TD (true) or not (False)
+
+'''Phase correction'''
+phas_corr = harmonic*0. #phase of reference transmitter [degree] (gamma in Lukas phasing routine)
+#phas_corr -= 0.01*(harmonic*modfreq)*360 #phase of boxcar integrator [degree] (beta in Lukas phasing routine)
+print('A phase correction of {} degrees due to electronics was applied'.format(phas_corr))
+phas_res = -50. #more or less arbitrary phasing factor that makes real part absorptive and imaginary part dispersive
+print('A phase correction of {} degrees was applied to yield a perfect absorptive line shape'.format(phas_res))
+phas_corr += phas_res
+print('Total phase correction: {} degree'.format(phas_corr))
+phas_corr -= 180. #to take into account that we measure negative signals by ion detection
+phas_corr += (180.*harmonic) % 360. #accounts for phase shift due to the fact that ref signal is other output of interferometer.
+
+
 
 """ Parameters for theoretical curve """
-phi = 90. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
+phi = 0. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
 A = 1.  # amplitude (=R from MFLI)
 a = 0.9   # amplitude scaling factor
 offset = 0.  # offset
@@ -73,7 +93,6 @@ data = {
         'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
         's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
         'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
-#        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
             },
     'dev3265': {
         'harmonic': np.array(h5f.get('dev3265/harmonic')),
@@ -104,24 +123,21 @@ data = {
         's_x2': np.array(h5f.get('dev3269/s_x2'))[sort_inds],
         's_y2': np.array(h5f.get('dev3269/s_y2'))[sort_inds], }, }
 h5f.close()
-l_fel = data['LDM']['l_seed'][0]
-if plot_l_ref:
-    ldm_l_ref = data['LDM']['l_ref']
-    l_ref = np.mean(ldm_l_ref)
-else:
-    l_ref = 266.023
-#l_fel = 43.46*harmonic
-l_fel = 261.0726087 #261.7 #261.0726087
 
-T = data['LDM']['delay']
+l_ref = 266.003
+#l_fel = 43.46*harmonic
+#l_fel = 261.0726087 #261.7 #261.0726087
+
+T = data['LDM']['delay']+1.
 #data_window = [T[0]-5, T[-1]+5]
 
-
+E_undersamp = harmonic*spc.h*spc.c/(l_ref*spc.e)*1e9 # undersampling energy
+E_r = E_r - E_undersamp  #eV. undersampled resonance energy
 
 ''' laser spectrum '''
 points = np.linspace(wn_lim[0],wn_lim[1],1000)
-fwhm_FEL_wn = 1E7*(fwhm_FEL/(l_fel/harmonic)**2) # wavenumber FWHM of FEL
-l_FEL = 1E7/l_fel # wavenumber CWL of FE FalseL
+#fwhm_FEL_wn = 1E7*(fwhm_FEL/(l_fel/harmonic)**2) # wavenumber FWHM of FEL
+#l_FEL = 1E7/l_fel # wavenumber CWL of FE FalseL
 
 ''' Fano resonance simulation '''
 Ttheo = np.linspace(T[0],T[-1],1000)
@@ -131,6 +147,11 @@ AC = np.exp(-4.0*np.log(2)*((Ttheo)/AC_FWHM)**2)
 Fano = np.exp(-4.0*np.log(2)*((Ttheo)/Fano_FWHM)**2)
 Theo = 3*(3*Fano-7*AC)
 
+''' Seed laser AC simulation '''
+sl_fwhm = 99. # seed intensity fwhm in fs
+t_theo_seed = np.linspace(-200,200,5000)
+sl_AC = np.exp(-4.0*np.log(2)*(t_theo_seed/(sl_fwhm*np.sqrt(2)))**2) # seed laser AC
+sl_AC /= np.max(sl_AC)
 
 
 # loop over the mfli devices
@@ -140,6 +161,7 @@ for dev in device:
         mfli_harmonic = data[dev]['harmonic'][int(d)]
         i = str(mfli_harmonic) + 'H'
         Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d])# / data['LDM']['I0']
+#        Z *= np.exp(1j*40./360.*2.*np.pi)
         if i0_correction:
             Z = Z*(np.nanmean(data['LDM']['I0'])/data['LDM']['I0'])
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
@@ -154,38 +176,45 @@ for dev in device:
         #Ttheo = np.linspace(T[0],T[-1], 1000)
         Xtd,Ytd,Xt,Yt = fk.Curve(l_trans, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
 
-        delay = T
         X = Z.real
         X_s = Z_s.real
         Y = Z.imag
         Y_s = Z_s.imag
 
-        T_d,X_d,Y_d = fk.CutDataSet(T, X, Y, data_window)
-        Z = X_d + 1j*Y_d
+#        T_d,X_d,Y_d = fk.CutDataSet(T, X, Y, data_window)
+#        
+#       
+#        Z = X_d + 1j*Y_d
+        Z *= np.exp(1j*np.pi/180*phas_corr)
         scaling = 1E-4 #max(Z.real)/max(Ttheo)
 
+
+        T_d,X_d,Y_d = fk.CutDataSet(T, Z.real, Z.imag, data_window)
+        Z_cut = X_d + 1j*Y_d
+        Z_cut = fk.Phasing_TD(Z_cut,T_d,E_r)
+
         # Fourier traffo
-        Zg = fk.GaussWindow(T_d, Z, suscept)
+        Zg = fk.GaussWindow(T_d, Z_cut, suscept)
         Td = T[1]-T[0]
         if gauss:
             wn, dft = fk.DFT(T_d, Zg, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
         else:
-            wn, dft = fk.DFT(T_d, Z, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
+            wn, dft = fk.DFT(T_d, Z_cut, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
         FWHM , peakFullWidth = fk.PeakWidth(T, 0.1, False, zeroPaddingFactor)
         FWHM = FWHM
 
         # theoretical spectrum
-        center = 1E7*(1/l_fel- 1/l_ref)*mfli_harmonic + harmonic*1E7/l_ref
-        spectrum = np.exp(-4.0*0.693147*(points-center)**2/fwhm_FEL_wn**2) # spectrum in wavenumber space
-        spectrum*=(max(abs(dft))-min(abs(dft)))+min(abs(dft))
-        
+#        center = 1E7*(1/l_fel- 1/l_ref)*mfli_harmonic + harmonic*1E7/l_ref
+#        spectrum = np.exp(-4.0*0.693147*(points-center)**2/fwhm_FEL_wn**2) # spectrum in wavenumber space
+#        spectrum*=(max(abs(dft))-min(abs(dft)))+min(abs(dft))
+#        
         ''' Plot time domain '''
         figTD = plt.figure('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i), figsize=(14, 10))
 
         ax = figTD.add_subplot(321)
         ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
-#        ax.errorbar(delay, X, yerr=X_s, color=color, linestyle='')
-        ax.plot(delay, X, 'o-', color=color)
+        ax.errorbar(T, X, yerr=X_s, color=color, linestyle='')
+        ax.plot(T, X, 'o-', color=color)
         #ax.plot(Ttheo, scaling*Theo, 'k-')
         if plotTheo: ax.plot(Ttheo, Xt, 'r', alpha=0.3)
         ax.set_ylabel('X in a.u.')
@@ -195,7 +224,7 @@ for dev in device:
         ax = figTD.add_subplot(322)
         #ax.errorbar(delay, Y, yerr=Y_s, color=color, linestyle='')
         #ax.plot(Ttheo, scaling*Theo, 'k-')
-        ax.plot(delay, Y, '-', color=color)
+        ax.plot(T, Y, '-', color=color)
         if plotTheo: ax.plot(Ttheo, Yt, 'r', alpha=0.3)
         ax.set_ylabel('Y in a.u.')
         ax.grid()
@@ -203,7 +232,7 @@ for dev in device:
 
         ax = figTD.add_subplot(323)
         #ax.errorbar(delay, R, yerr=R_s, color=color, linestyle='')
-        ax.plot(delay, R, '-', color=color)
+        ax.plot(T, R, '-', color=color)
         ax.set_ylabel('R')
         ax.grid()
         ax.set_xlim(data_window[0],data_window[-1])
@@ -211,9 +240,9 @@ for dev in device:
         ax = figTD.add_subplot(324)
         #ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
         if unwrap_phase:
-            ax.plot(delay, np.unwrap(Phi), '-', color=color)
+            ax.plot(T, np.unwrap(Phi), '-', color=color)
         else: 
-            ax.plot(delay, Phi, '-', color=color)
+            ax.plot(T, Phi, '-', color=color)
         ax.set_ylabel('Phi (rad)')
         ax.grid()
         ax.set_xlim(data_window[0],data_window[-1])
@@ -222,7 +251,7 @@ for dev in device:
         ##Plot I0
         ax = figTD.add_subplot(325)
 #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-        ax.plot(delay, data['LDM']['I0'], '-', color= 'g')
+        ax.plot(T, data['LDM']['I0'], '-', color= 'g')
         ax.set_ylabel('I0 in $\mu$J')
         ax.set_xlabel('Delay in fs')
 #        ax.set_ylim(0,3)
@@ -243,7 +272,7 @@ for dev in device:
         if plot_l_ref:
             ax = figTD.add_subplot(326)
     #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-            ax.plot(delay, ldm_l_ref, '-', color = 'g')
+#            ax.plot(delay, ldm_l_ref, '-', color = 'g')
             ax.set_ylabel('wavelenght in nm')
             ax.set_xlabel('delay')
     #        ax.set_ylim(0,3)
@@ -265,7 +294,8 @@ for dev in device:
         figFT = plt.figure('scan_{0:03}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
         axs = figFT.add_subplot(111)
         axs.plot(wn, abs(dft), '-', color='r', linewidth = 2)
-        axs.plot(points,spectrum,'-',color='grey',linewidth = 2)
+        axs.plot(wn,dft.real)
+#        axs.plot(points,spectrum,'-',color='grey',linewidth = 2)
         if plot_eV:
             axs.set_xlabel(r'energy [eV]', fontsize=14)
         else:
@@ -303,10 +333,70 @@ for dev in device:
                 S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))
                 i += 1
             S[:,:] /= np.size(slide_positions)
-            fk.plot_spectrogram(figFT, wn, T_d, S, l_fel, wn_lim, t_lim)
+#            fk.plot_spectrogram(figFT, wn, T_d, S, l_fel, wn_lim, t_lim)
 #            plt.show()
 
 if not interactive_plots:
     plt.close('all')
 else:
     plt.show()
+    
+    
+    
+#==============================================================================
+# ''' Plots for Paper '''
+#==============================================================================
+Z =  Z[::-1]
+
+T = np.negative(T)[::-1]
+T_d = np.negative(T_d)[::-1]
+Z = np.conjugate(Z)
+Xtd,Ytd,Xt,Yt = fk.Curve(52.2186, 266.003, 5, 0, a*max(abs(Z)), offset, T_d[0], T_d[-1], 1000)
+time_theo = np.linspace(T_d[0]-10,T_d[-1]+10,30000)
+
+Xtd_full = np.sin(2.*np.pi/0.174*time_theo)
+
+
+ticksize= 2.
+ticklength = 5.
+fontsize=16.
+plt.rcParams['xtick.labelsize'] = fontsize
+plt.rcParams['ytick.labelsize'] = fontsize
+plt.rcParams['axes.labelsize'] = fontsize
+plt.rcParams['xtick.major.width'] = ticksize
+plt.rcParams['xtick.major.size'] = ticklength
+plt.rcParams['ytick.major.width'] = ticksize
+plt.rcParams['ytick.major.size'] = ticklength
+plt.rcParams['axes.linewidth'] = ticksize
+plt.rcParams['lines.linewidth'] = 2.
+
+
+figTD = plt.figure(figsize=(4.4, 3))
+
+ax = figTD.add_subplot(111)
+ax.plot(time_theo,Xtd_full,color='silver',  linewidth = 1)
+ax.plot(T_d, 0.9*Z.real/max(Z.real), 'o', color=color,alpha=0.9)
+ax.plot(time_theo, Xtd/max(Xtd), '-', color='black')
+ax.set_xlabel(r'$\tau$ [fs]')
+ax.set_ylabel('intensity [a.u.]')
+ax.set_xlim(241,259)
+ax.set_ylim(-1.3,1.3)
+ax.set_yticks([])
+#ax.legend(['data','theory'],ncol=3, fontsize =12)
+plt.tight_layout()
+
+
+figTD_zoom = plt.figure(figsize=(4.1, 1.4))
+
+ax = figTD_zoom.add_subplot(111)
+ax.plot(time_theo,Xtd_full,color='silver', linewidth = 2)
+ax.plot(T_d, 0.9*Z.real/max(Z.real), 'o', color=color,alpha=0.9)
+ax.plot(time_theo, Xtd/max(Xtd), '-', color='black')
+#ax.set_xlabel(r'$\tau$ [fs]',fontsize=12)
+#ax.set_ylabel('intensity [a.u.]')
+ax.set_xlim(246.5,247.5)
+ax.set_ylim(-1.3,1.3)
+ax.set_yticks([])
+ax.set_xticklabels([])
+#ax.legend(['data','theory'],ncol=3, fontsize =12)
+plt.tight_layout()

@@ -9,12 +9,11 @@ import numpy as np
 import os
 import h5py
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 from scipy.special import jv
 
-#File in out
-i = 1
-run = 250
+#File in/out
+i = 5
+run =  236
 delay_zero_pos = 11025.66
 
 #define constants
@@ -23,18 +22,20 @@ planck=6.62607004e-34
 eV=1.60217662E-19
 
 '''plotting parameters'''
-plot_seed=True
-plot_FEL=False
+plot_seed=1
+plot_FEL=1
 plot_bunch=False
 plot_FELspec=True
 
 tminplot = -200e-15 #time range for plotting
 tmaxplot = 200e-15
 
-plt.close('all')
+#plt.close('all')
 
 '''File I/O'''
-ldm_file_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_2/Run_' + str(run) +'/rawdata/'.format(int(run))
+#ldm_file_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_2/Run_' + str(run) +'/rawdata/'.format(int(run))
+ldm_file_path = '//10.5.71.28/FermiServer/Beamtime2/Run_' + str(run) +'/rawdata/'.format(int(run))
+
 ldm_file = os.listdir(ldm_file_path)[0]
 ldm_data = h5py.File(ldm_file_path + ldm_file, 'r')
 
@@ -59,7 +60,7 @@ lambda_use = dat_Wavelength + (np.arange(1,1001)-500)*dat_Pixel2micron*1E-3*dat_
 
 E0 = 1.298E9*eV #electron beam nominal energy
 sigmaE = 100E3*eV #electron beam energy spread
-R56 = 55E-6 #dispersive strength
+R56 = 75E-6 #dispersive strength
 ebeamquadchirp = 1.9E6*eV/(1E-12)**2 #electron beam quadratic chirp
 ebeamcubechirp = 11.8E6*eV/(1E-12)**3 #electron beam cubic chirp
 
@@ -67,7 +68,7 @@ ebeamcubechirp = 11.8E6*eV/(1E-12)**3 #electron beam cubic chirp
 #ebeamcubechirp = 0*eV/(1E-12)**3 #electron beam cubic chirp
 
 
-lambdaseed = 261.1E-9 #seed laser wavelength
+lambdaseed = 261.3E-9 #seed laser wavelength
 k1 = 2*np.pi/lambdaseed #seed laser wave number
 omegaseed = 2.*np.pi*c/lambdaseed #seed laser angular frequency
 
@@ -75,7 +76,7 @@ n = 5 #harmonic number
 lambdaFEL = lambdaseed/n #FEL central wavelength
 
 
-tau10 = 85E-15 #first seed transform-limited pulse duration (annotation: E-field!!)
+tau10 = 141E-15 #first seed transform-limited pulse duration (annotation: E-field!!)
 dlambda1 = (c/(c/lambdaseed)**2)*(0.44/tau10) #transform-limited bandwidth
 GDD1 = 0E-27 #first seed linear frequency (quadratic phase) chirp
 tau1 = np.sqrt(1+(4*np.log(2)*GDD1/tau10**2)**2)*tau10 #first seed pulse duration
@@ -88,9 +89,9 @@ tau2 = np.sqrt(1+(4*np.log(2)*GDD2/tau20**2)**2)*tau20 #second seed pulse durati
 
 '''SEED TIMING and Phase'''
 #deltat = 250e-15 #separation between the seeds
-deltat = (ldm_delay-delay_zero_pos)*1e-15*0.85
+deltat = (ldm_delay-delay_zero_pos)*1e-15
 print(deltat*1e15)
-deltaphi = np.pi*1.65 #relative phase between the seeds
+deltaphi = 1.5*np.pi #relative phase between the seeds
 ebeamtiming = -200e-15 #relative timing between the electron beam and the two seeds
 
 
@@ -120,8 +121,7 @@ Psi2_fast = (1./(2.*GDD2+(tau20**4.)/(8.*(np.log(2.)**2.)*GDD2)))*(time-deltat)*
 
 
 C1 = 1. #relative seed amplitudes
-C2 = 0.77
-
+C2 = 1.
 
 seedfield_fast = (C1*np.exp(-2.*np.log(2)*time**2/tau1**2)*np.exp(1j*Psi1_fast) + C2*np.exp(-2*np.log(2)*(time-deltat)**2/tau2**2)*np.exp(1j*Psi2_fast)*np.exp(1j*deltaphi)) #seed electric field; first seed centered at time=0 fs
 seedfield= (C1*np.exp(-2.*np.log(2)*time**2/tau1**2)*np.exp(1j*Psi1) + C2*np.exp(-2*np.log(2)*(time-deltat)**2/tau2**2)*np.exp(1j*Psi2)*np.exp(1j*deltaphi)) #seed electric field; first seed centered at time=0 fs
@@ -133,9 +133,10 @@ seedphase_fast = np.unwrap(np.angle(seedfield_fast))
 
 
 
-A0 = 4. #amplitude of the energy modulation of the electron beam induced by the seeds
+A0 = 4 #amplitude of the energy modulation of the electron beam induced by the seeds
 A = A0*np.sqrt(seedenvelope) #temporal profile of the energy modulation of the electron beam
 B = R56*k1*sigmaE/E0 #normalized dispersive strength
+print 'dispersive strength = {}'.format(B)
 
 #electron beam energy profile defined as the nominal energy E0 plus quadratic and cubic terms
 ebeamenergyprofile = (E0+ebeamquadchirp*(time-ebeamtiming)**2+ebeamcubechirp*(time-ebeamtiming)**3)
@@ -146,10 +147,11 @@ btime = np.exp(-(n*B)**2/2.)*jv(n, -n*B*A)*np.exp(1j*n*seedphase)*np.exp(1j*n*eb
 btime_fast = np.exp(-(n*B)**2/2.)*jv(n, -n*B*A)*np.exp(1j*n*seedphase_fast)*np.exp(1j*n*ebeamphase)
 #plt.plot(btime_fast)
 maxbunching = max(abs(btime)) #calculates maximum bunching, this depends on the energy modulation amplitude A and R56, should be several percent to correspond to realistic experimental conditions
-
+print 'maxbunching = {}'.format(maxbunching)
 FELint = sum(abs(btime)**2) #total FEL intensity in a.u.
 
-FELtime = abs(btime)**2/max(abs(btime)**2) #normalized FEL intensity profile in the time domain
+#FELtime = abs(btime)**2/max(abs(btime)**2) #normalized FEL intensity profile in the time domain
+FELtime = abs(btime)**2 #un-normalized FEL intensity profile in the time domain
 FELphase = np.unwrap(np.angle(btime)) # FEL phase
 
 
@@ -163,7 +165,8 @@ seedspectralenvelope_fast = abs(seedspectralenvelope_fast)**2/max(abs(seedspectr
 #plt.plot(seedspectralenvelope_fast[259270:259450])
 
 FELfreq = abs(np.fft.fftshift(np.fft.fft(np.fft.fftshift(btime))))**2 #FEL spectral envelope
-FELfreq = FELfreq/max(FELfreq) #normalize the FEL spectral enevelope
+#FELfreq = FELfreq/max(FELfreq) #normalize the FEL spectral enevelope
+FELfreq = FELfreq/1E6 #normalize the FEL spectral enevelope
 timerange = max(time)-min(time) # time range for FFT
 #sizetime =size(time)
 #freqrange = c/(lambdaseed/n ) + (-(0.5)*(1/timerange)*(sizetime(2)-1):(1/timerange):(0.5)*(1/timerange)*(sizetime(2)-1)) # calculated frequency range for FFT
@@ -234,13 +237,12 @@ if plot_FEL:
     plt.tight_layout()
 
 if plot_FELspec:
-    fig, ax = plt.subplots(1)
-    #specnumber=1 #which experimental single shot spectrum to plot (from HDF file)
-    ax.plot(lambda_use,spectrum,lambdarange*1e9,FELfreq,linewidth=2) #plot the experimental and calculated FEL spectra onto the same plot
-    ax.legend(['experiment','calculation'])
-    ax.set_xlim(52., 52.4) #wavelength range in plots
-    ax.set_xlabel('WAVELENGTH (nm)')
-    ax.set_ylabel('FEL spectrum (a.u.)')
+    plt.figure('FEL spectrum')
+    plt.plot(lambda_use,spectrum,lambdarange*1e9,FELfreq,linewidth=2) #plot the experimental and calculated FEL spectra onto the same plot
+    plt.legend(['experiment','calculation'])
+    plt.xlim(52., 52.4) #wavelength range in plots
+    plt.xlabel('WAVELENGTH (nm)')
+    plt.ylabel('FEL spectrum (a.u.)')
 
 if plot_bunch:
     fig, ax = plt.subplots(1)

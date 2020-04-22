@@ -26,7 +26,7 @@ save_fig = 0
 plotTheo = 1
 spectrogram = 0
 plot_eV = 1
-plot_l_ref = 0
+plot_l_ref = 1
 
 """Experimental Parameters"""
 # parameters for theoretical curve
@@ -73,7 +73,7 @@ data = {
         'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
         's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
         'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
-#        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
+        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
             },
     'dev3265': {
         'harmonic': np.array(h5f.get('dev3265/harmonic')),
@@ -140,6 +140,7 @@ for dev in device:
         mfli_harmonic = data[dev]['harmonic'][int(d)]
         i = str(mfli_harmonic) + 'H'
         Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d])# / data['LDM']['I0']
+#        Z *= np.exp(1j*40./360.*2.*np.pi)
         if i0_correction:
             Z = Z*(np.nanmean(data['LDM']['I0'])/data['LDM']['I0'])
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
@@ -153,6 +154,10 @@ for dev in device:
 #        if draw_theory:
         #Ttheo = np.linspace(T[0],T[-1], 1000)
         Xtd,Ytd,Xt,Yt = fk.Curve(l_trans, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
+        print l_trans
+        print l_ref
+        print phi
+        print harmonic
 
         delay = T
         X = Z.real
@@ -184,7 +189,7 @@ for dev in device:
 
         ax = figTD.add_subplot(321)
         ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
-#        ax.errorbar(delay, X, yerr=X_s, color=color, linestyle='')
+        ax.errorbar(delay, X, yerr=X_s, color=color, linestyle='')
         ax.plot(delay, X, 'o-', color=color)
         #ax.plot(Ttheo, scaling*Theo, 'k-')
         if plotTheo: ax.plot(Ttheo, Xt, 'r', alpha=0.3)
@@ -310,3 +315,33 @@ if not interactive_plots:
     plt.close('all')
 else:
     plt.show()
+    
+    
+''' Plots for Paper '''
+ticksize= 2.
+ticklength = 5.
+fontsize=16.
+plt.rcParams['xtick.labelsize'] = fontsize
+plt.rcParams['ytick.labelsize'] = fontsize
+plt.rcParams['axes.labelsize'] = fontsize
+plt.rcParams['xtick.major.width'] = ticksize
+plt.rcParams['xtick.major.size'] = ticklength
+plt.rcParams['ytick.major.width'] = ticksize
+plt.rcParams['ytick.major.size'] = ticklength
+plt.rcParams['axes.linewidth'] = ticksize
+plt.rcParams['lines.linewidth'] = 2.
+
+
+figTD = plt.figure(figsize=(4.5, 3.3))
+
+ax = figTD.add_subplot(111)
+ax.plot(delay, X, 'o', color=color,alpha=0.7)
+#ax.plot(Ttheo, scaling*Theo, 'k-')
+ax.plot(np.linspace(T[0]-10,T[-1]+10,30000), Xtd, '-', color='black', alpha=0.7)
+ax.set_xlabel(r'$\tau$ [fs]')
+ax.set_ylabel(r'$\Re (S)$ [a.u.]')
+ax.set_xlim(298,320)
+ax.set_ylim(-0.3,0.3)
+#ax.set_yticks([-0.2,-0.1,0.0,0.1,0.2])
+ax.legend(['data','theory'],ncol=2,fontsize=12)
+plt.tight_layout()

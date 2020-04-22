@@ -11,26 +11,28 @@ import h5py
 from scipy import signal
 import matplotlib.pyplot as plt
 import scipy.constants as spc
+import pandas as pd
+
 
 #plt.close('all')
 """ Data parameters """
-run = 793 #first run of delay scan
-demod = ['0']
+run = 893 #first run of delay scan
+demod = ['1']
 device = ['dev3265']
 #demod = ['0','1', '2']
 #device = ['dev3265', 'dev3269']
 #root_file_path = '//10.5.71.28/FermiServer/Beamtime2/combined/'
-root_file_path = '//10.5.71.1/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/combined/'
+root_file_path = '//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime1/combined/'
 interactive_plots = 1
 save_fig = 0
 plotTheo = 1
-spectrogram = 0
+spectrogram = 1
 plot_eV = 1
 plot_l_ref = 0
 
 """Experimental Parameters"""
 # parameters for theoretical curve
-l_trans = 52.2186  # helium 1s-4p transition in nm 
+l_trans = 52.2213067  # helium 1s-4p transition in nm 
 #l_trans = 260.92/6.0 # fanoresonance in argon
 #l_ref = 266.0234244226323  #265.98  # reference laser wavelenght in nm
 fwhm_FEL = 0.075 # FEL fwhm, used for calculation of FEL spectrum
@@ -38,11 +40,11 @@ harmonic = 5.  # harmonic of FEL
 delay_zero_pos = 11025.66
 title = 'Scan_{0:03}/'.format(int(run))
 color = 'b'
-data_window = [300.,320.0] #[-200,370]
-gauss = 1 # gauss window on TD (true) or not (False)
+data_window = [-400.,200.0] 
+gauss = 0 # gauss window on TD (true) or not (False)
 
 """ Parameters for theoretical curve """
-phi = 90. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
+phi = 50. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
 A = 1.  # amplitude (=R from MFLI)
 a = 0.9   # amplitude scaling factor
 offset = 0.  # offset
@@ -73,7 +75,6 @@ data = {
         'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
         's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
         'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
-#        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
             },
     'dev3265': {
         'harmonic': np.array(h5f.get('dev3265/harmonic')),
@@ -104,12 +105,8 @@ data = {
         's_x2': np.array(h5f.get('dev3269/s_x2'))[sort_inds],
         's_y2': np.array(h5f.get('dev3269/s_y2'))[sort_inds], }, }
 h5f.close()
-l_fel = data['LDM']['l_seed'][0]
-if plot_l_ref:
-    ldm_l_ref = data['LDM']['l_ref']
-    l_ref = np.mean(ldm_l_ref)
-else:
-    l_ref = 266.023
+
+l_ref = 266.003
 #l_fel = 43.46*harmonic
 l_fel = 261.0726087 #261.7 #261.0726087
 
@@ -131,6 +128,11 @@ AC = np.exp(-4.0*np.log(2)*((Ttheo)/AC_FWHM)**2)
 Fano = np.exp(-4.0*np.log(2)*((Ttheo)/Fano_FWHM)**2)
 Theo = 3*(3*Fano-7*AC)
 
+''' Seed laser AC simulation '''
+sl_fwhm = 99. # seed intensity fwhm in fs
+t_theo_seed = np.linspace(-200,200,5000)
+sl_AC = np.exp(-4.0*np.log(2)*(t_theo_seed/(sl_fwhm*np.sqrt(2)))**2) # seed laser AC
+sl_AC /= np.max(sl_AC)
 
 
 # loop over the mfli devices
@@ -140,6 +142,7 @@ for dev in device:
         mfli_harmonic = data[dev]['harmonic'][int(d)]
         i = str(mfli_harmonic) + 'H'
         Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d])# / data['LDM']['I0']
+#        Z *= np.exp(1j*40./360.*2.*np.pi)
         if i0_correction:
             Z = Z*(np.nanmean(data['LDM']['I0'])/data['LDM']['I0'])
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
@@ -153,6 +156,7 @@ for dev in device:
 #        if draw_theory:
         #Ttheo = np.linspace(T[0],T[-1], 1000)
         Xtd,Ytd,Xt,Yt = fk.Curve(l_trans, l_ref, harmonic, phi, a*max(abs(Z)), offset, T[0], T[-1], 1000)
+
 
         delay = T
         X = Z.real
@@ -185,7 +189,7 @@ for dev in device:
         ax = figTD.add_subplot(321)
         ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
 #        ax.errorbar(delay, X, yerr=X_s, color=color, linestyle='')
-        ax.plot(delay, X, 'o-', color=color)
+        ax.plot(delay, X, '-', color=color)
         #ax.plot(Ttheo, scaling*Theo, 'k-')
         if plotTheo: ax.plot(Ttheo, Xt, 'r', alpha=0.3)
         ax.set_ylabel('X in a.u.')
@@ -242,8 +246,7 @@ for dev in device:
         ##Plot Reflaser wavelenght
         if plot_l_ref:
             ax = figTD.add_subplot(326)
-    #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-            ax.plot(delay, ldm_l_ref, '-', color = 'g')
+    #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle=''
             ax.set_ylabel('wavelenght in nm')
             ax.set_xlabel('delay')
     #        ax.set_ylim(0,3)
@@ -285,6 +288,9 @@ for dev in device:
             plt.savefig(file_path + 'scan_{0:03}_{1}_d{2}_FD_{3}.png'.format(run, dev, d, i), dpi=400)
 
         if spectrogram:
+            wn_lim /= 1.239842E-4
+            l_ref *= 1.239842E-4
+            l_trans *= 1.239842E-4
             # plot spec
             figFT = plt.figure('scan_{0:03}_{1}_d{2}_SG_{3}'.format(run, dev, d, i))
             print(T_d[0], T_d[-1])
@@ -296,17 +302,65 @@ for dev in device:
             i = 0
             for slide_pos in slide_positions:
                 Z_slide = fk.slide_window(T_d, Z, slide_pos, FWHM_slide)    # multiply gaussian onto data set which is centered at current sliding position
-                wn,  DFT_slide = fk.DFT(T_d, Z_slide, Td, l_ref , harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian
+                wn,  DFT_slide = fk.DFT(T_d, Z_slide, Td, l_ref, harmonic, zeroPaddingFactor = 2)   # FFT of interferogram which has been truncated by mulitplying wiht gaussian           
                 # add DFT to spectrum-matrix while weighting with temporal gaussian envelope
 #                for i in range(np.size(T_d)):
 #                    S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))*fk.weighting_coeff(T_d[i], slide_pos, FWHM_slide)
                 S[i,:] += abs(DFT_slide)/max(abs(DFT_slide))
                 i += 1
             S[:,:] /= np.size(slide_positions)
-            fk.plot_spectrogram(figFT, wn, T_d, S, l_fel, wn_lim, t_lim)
+            fk.plot_spectrogram(figFT, wn, T_d, S, l_fel/5, l_trans, wn_lim, t_lim)
 #            plt.show()
 
 if not interactive_plots:
     plt.close('all')
 else:
     plt.show()
+    
+    
+#''' Plots for Paper '''
+#ticksize= 2.
+#ticklength = 5.
+#fontsize=16.
+#plt.rcParams['xtick.labelsize'] = fontsize
+#plt.rcParams['ytick.labelsize'] = fontsize
+#plt.rcParams['axes.labelsize'] = fontsize
+#plt.rcParams['xtick.major.width'] = ticksize
+#plt.rcParams['xtick.major.size'] = ticklength
+#plt.rcParams['ytick.major.width'] = ticksize
+#plt.rcParams['ytick.major.size'] = ticklength
+#plt.rcParams['axes.linewidth'] = ticksize
+#plt.rcParams['lines.linewidth'] = 2.
+#
+##importing 5H Signal from AC scan with 5th harmonic and Argon (scan2828)
+#df = pd.read_csv('//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/ScansOverZero/scan_2828/Z_5H_vs_delay.csv')
+#T_2828 = np.array(df['delay'])
+#X_5H_2828 = np.array(df['X'])
+#
+##straight line that guides the eye when looking at the phase
+#line =  39.5/400.*Ttheo
+#
+#figTD = plt.figure(figsize=(15, 8))
+#
+#ax = figTD.add_subplot(111)
+#ax.plot(delay, X/max(abs(X)), color=color,alpha=0.7)
+#ax.plot(Ttheo, Xt/max(abs(Xt))*0.7, 'r', alpha=0.3)
+##ax.plot(T_2828,Z_5H_2828.real/max(abs(Z_5H_2828)),'g',alpha=0.6)
+#ax.fill_between(t_theo_seed,sl_AC*0.4,color='grey')
+#ax.fill_between(t_theo_seed,-sl_AC*0.4,color='grey')
+#ax.plot(500,5,'grey')
+#ax.legend([r'X','X_theo','seed AC'],'upper center')
+##ax.plot(Ttheo, scaling*Theo, 'k-')
+#ax.set_xlabel(r'$\tau$ [fs]')
+#ax.set_ylabel(r'intensity [a.u.]')
+#ax2 = ax.twinx()
+#ax2.plot(delay, (np.unwrap(np.angle(X+1j*Y))-245.5)/(2*np.pi), color = 'g', alpha=0.7)
+#ax2.plot(Ttheo,line,color = 'black', alpha=0.5)
+#ax2.set_ylabel(r'phase [$2\pi$ rad]')
+##ax2.set_ylim(-20,20)
+#ax2.legend([r'$\phi(S)$',r'$0.1 \tau$'],'lower center')
+#ax.set_xlim(-410,220)
+#ax.set_ylim(-1,1)
+##ax.set_yticks([-0.2,-0.1,0.0,0.1,0.2])
+##ax.legend(['data','theory'],ncol=2,fontsize=12)
+#plt.tight_layout()

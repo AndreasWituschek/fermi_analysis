@@ -120,12 +120,12 @@ for deltat in np.linspace(start,stop,points):
 #    plt.plot(crosscorr)
 
 plt.close('all')
-plt.plot(t,np.sqrt(cc_t))
+plt.plot(t,cc_t)
 plt.xlabel('delay [fs]')
 plt.close('all')
 cc_dft = np.fft.fftshift(np.fft.fft(np.fft.fftshift(cc_t)))
 freqs = np.fft.fftshift(np.fft.fftfreq(points,d=(stop-start)/points))
-plt.plot(freqs/1.14785e15,cc_dft)
+plt.plot(freqs/1.14785e15,abs(cc_dft))
 plt.xlabel('frequency [1.1478 PHz]')
 
 

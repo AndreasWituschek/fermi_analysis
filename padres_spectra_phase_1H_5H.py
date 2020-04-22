@@ -9,8 +9,6 @@ import numpy as np
 import os
 import h5py
 import matplotlib.pyplot as plt
-#import matplotlib as mpl
-#mpl.style.use('classic')
 
 runs = [6777,6773,6768] #[5H, 7H, 10H]
 #runs = [6777,6774,6768] #[5H, 7H, 10H]
@@ -45,7 +43,7 @@ for run in runs:
         
         #padres spectrum
         ldm_padres = np.array(ldm_data['photon_diagnostics']['Spectrometer']['hor_spectrum'])
-        ldm_padres = ldm_padres/np.max(ldm_padres,axis=1).reshape(400,1).astype(float) #normation of padres spectrum
+        ldm_padres = ldm_padres/np.mean(ldm_padres,axis=1).reshape(400,1).astype(float) #normation of padres spectrum
         padres = np.append(padres, ldm_padres,axis=0)  
         #padres spectrometer metadata
         padres_wavelength = np.array(ldm_data['photon_diagnostics']['Spectrometer']['Wavelength'])
@@ -55,7 +53,7 @@ for run in runs:
         #seed laser spectrum
         if run == 6777: #only analyze first run
             ldm_sl = np.array(ldm_data['photon_source']['SeedLaserSpectrum_FEL01']['Spectrum'],dtype=np.float32)
-            ldm_sl = ldm_sl/np.max(ldm_sl,axis=1).reshape(400,1) #normation of seed laser specturm
+#            ldm_sl = ldm_sl/np.max(ldm_sl,axis=1).reshape(400,1) #normation of seed laser specturm
             print(sl.shape,ldm_sl.shape)
 #            sl = np.append(sl, ldm_sl,axis=0) 
             sl = np.append(sl, ldm_sl,axis=0) 
@@ -74,28 +72,28 @@ sl_lambda = np.arange(ldm_roi[0],395,0.06818072)-80 # this calibration is a post
 
 ''' Proper Data windows for all harmonics '''
 #seed laser 
-sl_low=1200
-sl_high=1350
+sl_low=1220
+sl_high=1330
 sl_spec = np.transpose(sl)[sl_low:sl_high,0:600]
 sl_roi = sl_lambda[sl_low:sl_high]
 
 
 #data window 5H run 6777
-padres_low=80
-padres_high=330
+padres_low=100
+padres_high=310
 padres_spec_5H = np.transpose(padres_spec[0])[padres_low:padres_high,0:600]
 padres_roi_5H = padres_roi[0][padres_low:padres_high]
 
 
 #data window 7H run 6773
-padres_low=190
-padres_high=320
+padres_low=200
+padres_high=310
 padres_spec_7H = np.transpose(padres_spec[1])[padres_low:padres_high,0:600]
 padres_roi_7H = padres_roi[1][padres_low:padres_high]
 
 #data window 10H run 6769
-padres_low=120
-padres_high=290
+padres_low=130
+padres_high=280
 padres_spec_10H = np.transpose(padres_spec[2])[padres_low:padres_high,1900:2500] #3400:4000
 padres_roi_10H = padres_roi[2][padres_low:padres_high]
 
@@ -117,8 +115,8 @@ padres_roi_10H = padres_roi[2][padres_low:padres_high]
 
 #plot params
 ticksize= 2.
-ticklength = 6.
-fontsize=19.
+ticklength = 5.
+fontsize=16.
 plt.rcParams['xtick.labelsize'] = fontsize
 plt.rcParams['ytick.labelsize'] = fontsize
 plt.rcParams['axes.labelsize'] = fontsize
@@ -131,7 +129,7 @@ plt.rcParams['lines.linewidth'] = 2.
 
 
 
-fig = plt.figure(figsize=(9,9.5))
+fig = plt.figure(figsize=(9,8))
 
 #seed laser spectrum
 ax = fig.add_subplot(411)
@@ -140,10 +138,10 @@ ax.pcolormesh(np.arange(sl_spec.shape[1]),sl_roi, sl_spec)
 ax.ticklabel_format(useOffset=False)
 ax.tick_params(length=ticklength, width = ticksize)
 ax.set_xlim([0,599])
-ax.set_ylim([258.5,263.5])
+ax.set_ylim([259.,263.])
 ax.set_xticklabels([])
-ax.set_yticks([259,260.,261.,262.,263])
-#ax.set_yticklabels(['260.0','261.0','262.0'])
+ax.set_yticks([260.,261.,262.])
+ax.set_yticklabels(['260.0','261.0','262.0'])
 
 #5H spectrum
 ax = fig.add_subplot(412)
@@ -151,7 +149,7 @@ ax.pcolormesh(np.arange(padres_spec_5H.shape[1]), padres_roi_5H, padres_spec_5H)
 ax.tick_params(length=ticklength, width = ticksize)
 #ax.set_ylabel(r'5H $\lambda$ [nm]')
 ax.set_xlim([0,599])
-ax.set_ylim([52.05,52.45])
+ax.set_ylim([52.1,52.4])
 ax.set_xticklabels([])
 ax.set_yticks([52.15,52.25,52.35])
 ax.set_yticklabels(['52.15','52.25','52.35'])
@@ -164,7 +162,7 @@ ax.tick_params(length=ticklength, width = ticksize)
 #ax.set_ylabel(r'7H $\lambda$ [nm]')
 #ax.set_xlabel('# Shots')
 ax.set_xlim([0,599])
-ax.set_ylim([37.2,37.40])
+ax.set_ylim([37.2,37.4])
 ax.set_xticklabels([])
 ax.set_yticks([37.25,37.30,37.35])
 ax.set_yticklabels(['37.25','37.30','37.35'])
@@ -176,16 +174,15 @@ ax.tick_params(length=ticklength, width = ticksize)
 #ax.set_ylabel(r'10H $\lambda$ [nm]')
 ax.set_xlabel('laser shot')
 ax.set_xlim([0,599])
-ax.set_ylim([26.05,26.17])
-ax.set_yticks([26.05,26.10,26.15])
-ax.set_yticklabels(['26.05','26.10','26.15'])
-plt.subplots_adjust(hspace=0.0)
+ax.set_ylim([26.06,26.16])
+ax.set_yticks([26.08,26.10,26.12,26.14])
+ax.set_yticklabels(['26.08','26.10','26.12','26.14'])
 
 #plt.tight_layout()
 
 
 
-plt.savefig('//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/Publications/PM_Fermi/CEP_padres.png',dpi=500)
+
 
 
 #fig, ax = plt.subplots(4, 1)
@@ -218,21 +215,3 @@ plt.savefig('//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/P
 #ax[3].set_ylim([26.05,26.18])
 
 
-# =============================================================================
-# intensity bar:
-# =============================================================================
-
-
-x = 2
-y = 200
-
-xx = np.zeros(x)
-
-cc = np.array([])
-for i in range(y):
-    cc = np.append(cc,xx)
-    xx += 1
-
-cc = cc.reshape((y,-1))    
-
-plt.pcolormesh(np.arange(x),np.arange(y),cc)

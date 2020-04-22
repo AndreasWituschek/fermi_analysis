@@ -12,9 +12,9 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import scipy.constants as spc
 
-#plt.close('all')
+plt.close('all')
 """ Data parameters """
-run = 793 #first run of delay scan
+run = 31 #first run of delay scan
 demod = ['0']
 device = ['dev3265']
 #demod = ['0','1', '2']
@@ -23,10 +23,9 @@ device = ['dev3265']
 root_file_path = '//10.5.71.1/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/combined/'
 interactive_plots = 1
 save_fig = 0
-plotTheo = 1
+plotTheo = 0
 spectrogram = 0
 plot_eV = 1
-plot_l_ref = 0
 
 """Experimental Parameters"""
 # parameters for theoretical curve
@@ -38,22 +37,23 @@ harmonic = 5.  # harmonic of FEL
 delay_zero_pos = 11025.66
 title = 'Scan_{0:03}/'.format(int(run))
 color = 'b'
-data_window = [300.,320.0] #[-200,370]
-gauss = 1 # gauss window on TD (true) or not (False)
+data_window = [150,700] #[-200,370]
+gauss = 0 # gauss window on TD (true) or not (False)
 
 """ Parameters for theoretical curve """
-phi = 90. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
+phi = 0. #-190.0 #-100 #-20.0  # phase offset between reference and signal in degrees
 A = 1.  # amplitude (=R from MFLI)
-a = 0.9   # amplitude scaling factor
+a = 1.   # amplitude scaling factor
 offset = 0.  # offset
 
 """ analysis parameters """
-i0_correction = False
+i0_correction = True
+i0_5H_correction = False
 unwrap_phase = True
 slide_step = 32
 FWHM_slide = slide_step / np.sqrt(48)
 zeroPaddingFactor = 2
-suscept = False
+suscept = True
 #wn_lim = [217100,233800]
 wn_lim = np.asarray([185000.,196000.])
 #wn_lim = [189800,193100]
@@ -73,7 +73,8 @@ data = {
         'delay': np.array(h5f.get('LDM/delay'))[sort_inds],
         's_delay': np.array(h5f.get('LDM/s_delay'))[sort_inds],
         'l_seed': np.array(h5f.get('LDM/l_seed'))[sort_inds],
-#        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
+        'l_ref': np.array(h5f.get('LDM/l_ref'))[sort_inds],
+        'i0_fft': np.array(h5f.get('LDM/i0_fft'))[sort_inds]            
             },
     'dev3265': {
         'harmonic': np.array(h5f.get('dev3265/harmonic')),
@@ -105,14 +106,12 @@ data = {
         's_y2': np.array(h5f.get('dev3269/s_y2'))[sort_inds], }, }
 h5f.close()
 l_fel = data['LDM']['l_seed'][0]
-if plot_l_ref:
-    ldm_l_ref = data['LDM']['l_ref']
-    l_ref = np.mean(ldm_l_ref)
-else:
-    l_ref = 266.023
-#l_fel = 43.46*harmonic
+ldm_l_ref = data['LDM']['l_ref']
+l_ref = np.mean(ldm_l_ref)
+#l_fel = 262.2
+l_fel = 43.46*harmonic
 l_fel = 261.0726087 #261.7 #261.0726087
-
+#print l_fel
 T = data['LDM']['delay']
 #data_window = [T[0]-5, T[-1]+5]
 
@@ -124,13 +123,36 @@ fwhm_FEL_wn = 1E7*(fwhm_FEL/(l_fel/harmonic)**2) # wavenumber FWHM of FEL
 l_FEL = 1E7/l_fel # wavenumber CWL of FE FalseL
 
 ''' Fano resonance simulation '''
-Ttheo = np.linspace(T[0],T[-1],1000)
+Ttheo = np.linspace(data_window[0],data_window[1],1000)
 AC_FWHM = 100.0  # in fs
 Fano_FWHM = 140.0  # in fs
 AC = np.exp(-4.0*np.log(2)*((Ttheo)/AC_FWHM)**2)
 Fano = np.exp(-4.0*np.log(2)*((Ttheo)/Fano_FWHM)**2)
 Theo = 3*(3*Fano-7*AC)
 
+''' Seed laser AC simulation '''
+sl_fwhm = 99. # seed intensity fwhm in fs
+t_theo_seed = np.linspace(-200,200,5000)
+sl_AC = np.exp(-4.0*np.log(2)*(t_theo_seed/(sl_fwhm*np.sqrt(2)))**2) # seed laser AC
+sl_AC /= np.max(sl_AC)
+
+
+''' Resolution from Data window '''
+print(spc.h/(abs(data_window[-1]-data_window[0])*1E-15*spc.e))
+
+
+''' i0 correction for different harmonic contents of i0 '''
+i0_fft = data['LDM']['i0_fft']
+i0_0H = np.sum(i0_fft[::,395:405],axis=1)
+i0_1H = np.sum(i0_fft[::,458:468],axis=1)
+i0_2H = np.sum(i0_fft[::,522:532],axis=1)
+i0_3H = np.sum(i0_fft[::,585:595],axis=1)
+i0_4H = np.sum(i0_fft[::,648:658],axis=1)
+i0_5H = np.sum(i0_fft[::,711:721],axis=1)
+
+#i0_5H = i0_5H-np.mean(i0_5H[200:])
+i0_5H /= np.max(i0_5H)
+#i0_5H = abs(i0_5H)
 
 
 # loop over the mfli devices
@@ -141,7 +163,10 @@ for dev in device:
         i = str(mfli_harmonic) + 'H'
         Z = (data[dev]['x' + d] + 1j * data[dev]['y' + d])# / data['LDM']['I0']
         if i0_correction:
-            Z = Z*(np.nanmean(data['LDM']['I0'])/data['LDM']['I0'])
+            Z = Z*(np.nanmean(data['LDM']['I0'][228:303])/data['LDM']['I0'])
+        if i0_5H_correction:
+            Z = Z*i0_5H
+
         Z_s = data[dev]['s_x' + d] + 1j * data[dev]['s_y' + d]
 
         R = np.sqrt(Z.real**2 + Z.imag**2)
@@ -172,7 +197,7 @@ for dev in device:
         else:
             wn, dft = fk.DFT(T_d, Z, Td, l_ref , harmonic, zeroPaddingFactor = zeroPaddingFactor)
         FWHM , peakFullWidth = fk.PeakWidth(T, 0.1, False, zeroPaddingFactor)
-        FWHM = FWHM
+
 
         # theoretical spectrum
         center = 1E7*(1/l_fel- 1/l_ref)*mfli_harmonic + harmonic*1E7/l_ref
@@ -184,11 +209,13 @@ for dev in device:
 
         ax = figTD.add_subplot(321)
         ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
-#        ax.errorbar(delay, X, yerr=X_s, color=color, linestyle='')
-        ax.plot(delay, X, 'o-', color=color)
-        #ax.plot(Ttheo, scaling*Theo, 'k-')
-        if plotTheo: ax.plot(Ttheo, Xt, 'r', alpha=0.3)
-        ax.set_ylabel('X in a.u.')
+        #ax.errorbar(delay, X, yerr=X_s, color='b', linestyle='')
+        ax.plot(delay, X, color=color)
+        ax.fill_between(t_theo_seed,sl_AC*np.max(abs(X))*0.8,color='grey')
+        ax.fill_between(t_theo_seed,-sl_AC*np.max(abs(X))*0.8,color='grey')
+        if plotTheo: ax.plot(np.linspace(T[0]-10,T[-1]+10,len(Xtd)), Xtd, 'b', alpha=0.3)
+        ax.set_ylabel('X [a.u.]')
+        ax.set_xlabel('delay [fs]')
         ax.grid()
         ax.set_xlim(data_window[0],data_window[-1])
 
@@ -196,7 +223,8 @@ for dev in device:
         #ax.errorbar(delay, Y, yerr=Y_s, color=color, linestyle='')
         #ax.plot(Ttheo, scaling*Theo, 'k-')
         ax.plot(delay, Y, '-', color=color)
-        if plotTheo: ax.plot(Ttheo, Yt, 'r', alpha=0.3)
+        ax.fill_between(t_theo_seed,sl_AC*np.max(abs(Y)),color='black',alpha=0.3)
+        if plotTheo: ax.plot(np.linspace(T[0]-10,T[-1]+10,len(Ytd)), Ytd, 'r', alpha=0.3)
         ax.set_ylabel('Y in a.u.')
         ax.grid()
         ax.set_xlim(data_window[0],data_window[-1])
@@ -204,6 +232,7 @@ for dev in device:
         ax = figTD.add_subplot(323)
         #ax.errorbar(delay, R, yerr=R_s, color=color, linestyle='')
         ax.plot(delay, R, '-', color=color)
+        ax.fill_between(t_theo_seed,sl_AC*np.max(R),color='black',alpha=0.3)
         ax.set_ylabel('R')
         ax.grid()
         ax.set_xlim(data_window[0],data_window[-1])
@@ -222,8 +251,16 @@ for dev in device:
         ##Plot I0
         ax = figTD.add_subplot(325)
 #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-        ax.plot(delay, data['LDM']['I0'], '-', color= 'g')
-        ax.set_ylabel('I0 in $\mu$J')
+        if i0_5H_correction:
+            ax.plot(delay, i0_5H, '-', color= color)
+            ax.fill_between(t_theo_seed,sl_AC,color='black',alpha=0.3)
+            ax.set_ylabel('I0 5H [a.u.]')
+        else:
+            ax.plot(delay, data['LDM']['I0'], '-', color= color)
+            ax.fill_between(t_theo_seed,sl_AC*np.max(data['LDM']['I0']),color='black',alpha=0.3)
+            ax.set_ylabel('I0 in $\mu$J')        
+        
+        
         ax.set_xlabel('Delay in fs')
 #        ax.set_ylim(0,3)
         ax.grid()
@@ -240,15 +277,14 @@ for dev in device:
 ##        ax.set_xlim(data_window[0],data_window[-1])
 #
         ##Plot Reflaser wavelenght
-        if plot_l_ref:
-            ax = figTD.add_subplot(326)
-    #        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
-            ax.plot(delay, ldm_l_ref, '-', color = 'g')
-            ax.set_ylabel('wavelenght in nm')
-            ax.set_xlabel('delay')
-    #        ax.set_ylim(0,3)
-            ax.grid()
-            ax.set_xlim(data_window[0],data_window[-1])
+        ax = figTD.add_subplot(326)
+#        ax.errorbar(delay, Phi, yerr=R_s, color='k', linestyle='')
+        ax.plot(delay, ldm_l_ref, '-', color = 'g')
+        ax.set_ylabel('wavelenght in nm')
+        ax.set_xlabel('delay')
+#        ax.set_ylim(0,3)
+        ax.grid()
+        ax.set_xlim(data_window[0],data_window[-1])
 
         plt.tight_layout()
         if save_fig:
@@ -261,11 +297,13 @@ for dev in device:
             wn_lim *= 1.239842E-4
             l_ref /= 1.239842E-4
             l_trans /= 1.239842E-4
+            FWHM *= 1.239842E-4
+            print FWHM
                 
         figFT = plt.figure('scan_{0:03}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
         axs = figFT.add_subplot(111)
-        axs.plot(wn, abs(dft), '-', color='r', linewidth = 2)
-        axs.plot(points,spectrum,'-',color='grey',linewidth = 2)
+        axs.plot(wn, abs(dft)/max(abs(dft)), '-', color=color, linewidth = 2)
+#        axs.plot(points,spectrum,'-',color='grey',linewidth = 2)
         if plot_eV:
             axs.set_xlabel(r'energy [eV]', fontsize=14)
         else:
@@ -274,6 +312,7 @@ for dev in device:
         axs.set_title('scan_{0:03}_{1}_d{2}_FD_{3}'.format(run, dev, d, i))
 #        axs.set_xlim(180000.,195000.)
         axs.set_xlim(wn_lim[0],wn_lim[1])
+        axs.set_ylim(0,1.2)
         axs.axvline(1E7/l_trans,color = 'k' ,linestyle='-', linewidth= 2)
         axs.axvline(harmonic*1E7/l_ref,color = 'k',linestyle='--', linewidth= 2)
         plot_x_range = np.diff(axs.get_xlim())[0]
@@ -310,3 +349,56 @@ if not interactive_plots:
     plt.close('all')
 else:
     plt.show()
+    
+ 
+#i0_list = [i0_0H,i0_1H,i0_2H,i0_3H,i0_4H,i0_5H,i0_0H+i0_1H+i0_2H+i0_3H+i0_4H+i0_5H] 
+#for ii in i0_list:
+#    plt.plot(delay,ii)
+#    plt.xlabel('delay [fs]')
+#    plt.ylabel('i0 [a.u.]')
+#plt.legend(['0H','1H','2H','3H','4H','5H','sum'])
+
+#    
+''' Plots for XUV conference and paper '''
+
+ticksize= 3.0
+ticklength = 8.
+plt.rcParams['xtick.labelsize'] = 18
+plt.rcParams['ytick.labelsize'] = 18
+plt.rcParams['xtick.major.width'] = ticksize
+plt.rcParams['xtick.major.size'] = ticksize
+plt.rcParams['axes.linewidth'] = ticksize
+
+
+
+wn_lim = [harmonic*1E7/l_ref,24.3031]
+fig_paper = plt.figure(figsize=(6, 6))
+
+ax = fig_paper.add_subplot(211)
+#ax.set_title('scan_{0:03}_{1}_d{2}_TD_{3}'.format(run, dev, d, i))
+#ax.errorbar(delay, X, yerr=X_s, color='b', linestyle='')
+ax.plot(delay, X, 'b-',alpha=0.8)
+ax.fill_between(t_theo_seed,sl_AC*np.max(abs(X))*0.8,color='grey')
+ax.fill_between(t_theo_seed,-sl_AC*np.max(abs(X))*0.8,color='grey')
+if plotTheo: ax.plot(np.linspace(T[0]-10,T[-1]+10,len(Xtd)), Xtd, 'b', alpha=0.3)
+ax.set_ylabel('X [a.u.]')
+ax.set_xlabel('delay [fs]')
+#ax.grid()
+ax.set_xlim(0,data_window[-1])
+plt.tight_layout()
+
+
+'''plot frequency domain'''
+       
+ax1 = fig_paper.add_subplot(212)
+ax1.plot(wn, abs(dft), '-', color='b', linewidth = 2,alpha=0.8)
+ax1.set_xlabel(r'energy [eV]')
+ax1.set_ylabel('spectral amp. [a. u.]')
+ax1.axvline(1E7/l_trans,color = 'k' ,linestyle='--', linewidth= 2)
+ax1.axvline(harmonic*1E7/l_ref,color = 'k',linestyle='--', linewidth= 2)
+ax1.set_xlim(wn_lim[0],wn_lim[1])
+#add second x axis to plot:
+ax2 = ax1.twiny()
+ax2.set_xlabel('rotating frame energy [eV]')         
+ax2.set_xlim(wn_lim[0]-harmonic*1E7/l_ref,wn_lim[1]-harmonic*1E7/l_ref)
+plt.tight_layout()

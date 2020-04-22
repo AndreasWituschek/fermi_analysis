@@ -3,20 +3,29 @@
 Created on Mon Mar  4 21:59:36 2019
 
 @author: ldm
+
+02/04/19: 
+- Changed i0 from iom_sh_a to iom_uh_a
+- ref laser wavelength goes to hd5 files
+- removed runs go to hd5 files
+
+10/04/19:
+- added FFT of I0 to hd5 files
 """
 import numpy as np
 import os
 import errno
 import h5py
 
+'''Which beamtime?'''
+beamtime = 2
 
 """Experimental Parameters"""
-# parameters for theoretical curve
 delay_zero_pos = 11025.66
 mfli_name = ['dev3265', 'dev3269']  # number of MFLI demodulator to be analyzed
 
-runs = [6148, 6226]
-run_remove = [6052,6053,6054,6055,6056]#[5251,5272,5328] #[3991] #3874] #[3367, 3368,3471,3472,3486,3485,3605,3606,3607,3608,3609,3610,3611,3612,3613] #[2386,2504,2505,2506,2507,2508,2509,2510,2511,2529] #[1575,1576,1577] #[1153, 1161, 1178, 1205, 1206]
+runs = [1164,1424] #first and last run of a delay scan
+run_remove = [1250]#[5251,5272,5328]#[2981,1079,1080,1081,1078,1153,1161,1178,1205,1206]#[5251,5272,5328] #[226, 227, 292, 293, 294, 308] #[1248] [4964] #[226, 227, 292, 293, 294, 308] #[1385, 1387, 1413, 1420, 6052,6053,6054,6055,6056]# #[3991] #3874] #[3367, 3368,3471,3472,3486,3485,3605,3606,3607,3608,3609,3610,3611,3612,3613] #[2386,2504,2505,2506,2507,2508,2509,2510,2511,2529] #[1575,1576,1577] #[1153, 1161, 1178, 1205, 1206]
 run_missing_i0 = [3044] # runs that are missing iom_sh_a
 
 run_list = range(runs[0], runs[1] + 1)
@@ -26,14 +35,20 @@ for rr in run_remove:
 
 """ Analysis parameter """
 cut_frac = 0.2   # constant fraction of data points cut from MFLI data vector, starting at 0 -> [0:cut_frac*length] is cut
+transfer_ref = beamtime==2 # decides wether reference wavelenght is written into hd5 files. 
 
 """ File paths """
 # path where it saves the preanalysed data
-analyse_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/combined/'
+analyse_path = '//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime1/combined/'
+if beamtime==2:
+    analyse_path = '//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/combined/'
 analyse_path += 'scan_{:03}/'.format(runs[0])
-# path where the raw data is/home/ldm/ExperimentalData/Online4LDM
+# path where the raw data is: 
+root_path = '//10.5.71.28/fermiserver/beamtime1/Day_3/'
+if beamtime==2:
+    root_path = '//10.5.71.28/fermiserver/beamtime2/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_3/'
-root_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/'
+#root_path = '/home/ldm/ExperimentalData/Online4LDM/RBT-UOF_4/Data/'
 #root_path = '/home/ldm/ExperimentalData/Online4LDM/20149020/Day_4/'
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late/scan_1834
 #/home/ldm/ExperimentalData/Online4LDM/20149020/results/PM_Data/PM_Data_Day5/Late
@@ -65,7 +80,10 @@ ldm_delay_m = np.array([])
 ldm_delay_s = np.array([])
 ldm_i0_m = np.array([])
 ldm_i0_s = np.array([])
+ldm_i0_fft = np.array([])
 ldm_l_fel_m = np.array([])
+ldm_l_ref_m = np.array([])
+
 
 # Run numbers
 new_run_numbers = np.array([])
@@ -115,21 +133,36 @@ for run in run_list:
     ldm_file_path = run_path + 'rawdata/'
     ldm_delay = np.array([])
     ldm_i0 = np.array([])
+    ldm_l_ref = np.array([])
     for run_file in os.listdir(ldm_file_path):
         ldm_file = h5py.File(ldm_file_path + run_file, 'r')
         ldm_delay = np.append(ldm_delay, np.array(ldm_file['/photon_source/SeedLaser/trls_sl_03_pos']))
+        
         if run in run_missing_i0:
             ldm_i0 = np.zeros(ldm_delay.shape)
         else:
-            ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_sh_a']))
+            ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_uh_a']))
         ldm_l_fel = np.array(ldm_file['/photon_source/SeedLaser/Wavelength'])
+        if transfer_ref:
+            ldm_l_ref = np.array(ldm_file['/photon_source/Reference_Laser_UV_Spectrum/GaussFitCenter'])
         ldm_file.close()
     ldm_delay_m = np.append(ldm_delay_m, np.mean(ldm_delay) - delay_zero_pos)
     ldm_delay_s = np.append(ldm_delay_s, np.std(ldm_delay))
     ldm_i0_m = np.append(ldm_i0_m, np.mean(ldm_i0))
     ldm_i0_s = np.append(ldm_i0_s, np.std(ldm_i0))
-    ldm_l_fel_m = np.append(ldm_l_fel_m, ldm_l_fel)
+    ldm_l_fel_m = np.append(ldm_l_fel_m, ldm_l_fel) 
+    #i0 harmonics:
+    ldm_i0_fft_raw = abs(np.fft.fftshift(np.fft.fft(ldm_i0)))
+    ldm_i0_fft = np.append(ldm_i0_fft, ldm_i0_fft_raw)
+    ldm_i0_fft = ldm_i0_fft.reshape((-1,int(ldm_i0_fft_raw.size)))
+#    ldm_i0_fft_freq = np.fft.fftshift(np.fft.fftfreq(len(ldm_i0),1./50.))
 
+    
+            
+    
+    if transfer_ref:
+        ldm_l_ref_m = np.append(ldm_l_ref_m, ldm_l_ref)
+    
 # Handle MFLI data
     for mfli in mfli_name:
         mfli_file_path = run_path +'work/' + mfli + '/'
@@ -180,9 +213,13 @@ if file_exists:
         # Std I0
         ldm_group['s_I0'].resize((ldm_group['s_I0'].shape[0] + ldm_i0_s.shape[0]), axis = 0)
         ldm_group['s_I0'][-ldm_i0_s.shape[0]:] = ldm_i0_s
-        # l_ref
+        # l_seed
         ldm_group['l_seed'].resize((ldm_group['l_seed'].shape[0] + ldm_l_fel_m.shape[0]), axis = 0)
         ldm_group['l_seed'][-ldm_l_fel_m.shape[0]:] = ldm_l_fel_m
+        # l_ref
+        if transfer_ref:
+            ldm_group['l_ref'].resize((ldm_group['l_ref'].shape[0] + ldm_l_ref_m.shape[0]), axis = 0)
+            ldm_group['l_ref'][-ldm_l_ref_m.shape[0]:] = ldm_l_ref_m
 
         # Append MFLI data
         for mfli in mfli_name:
@@ -212,11 +249,17 @@ else:
     ldm_group.create_dataset('I0', data=ldm_i0_m, maxshape=(None,))
     # Std I0
     ldm_group.create_dataset('s_I0', data=ldm_i0_s, maxshape=(None,))
-    # l_ref
+    # l_seed
     ldm_group.create_dataset('l_seed', data=ldm_l_fel_m, maxshape=(None,))
+    # l_ref
+    if transfer_ref:
+        ldm_group.create_dataset('l_ref', data=ldm_l_ref_m, maxshape=(None,))
+    # i0 fft
+    ldm_group.create_dataset('i0_fft', data=ldm_i0_fft, maxshape=(None,None))
 
     # Run numbers
     analysis_file.create_dataset('run_numbers', data=new_run_numbers, maxshape=(None,))
+    analysis_file.create_dataset('removed_run_numbers', data=np.asarray(run_remove), maxshape=(None,))
 
     # Append MFLI data
     for mfli in mfli_name:
