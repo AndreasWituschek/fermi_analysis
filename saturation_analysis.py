@@ -12,13 +12,11 @@ import numpy as np
 #import errno
 import h5py
 import matplotlib.pyplot as plt
-import Tkinter, tkFileDialog
 
 
-root = Tkinter.Tk()
-root.withdraw()
+scan = 5395
 
-file_path = tkFileDialog.askopenfilename()
+file_path = '//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/combined/scan_{}/scan_{}_saturation_preanalysis.h5'.format(scan,scan)
 data = h5py.File(file_path, 'r')
 
 i0 = np.array(data['/LDM/I0'])
@@ -37,10 +35,14 @@ data.close()
 
 delay_plot = np.linspace(min(delay),max(delay),len(i0))[::-1]
 cut = np.max(np.argwhere(delay_plot>-200))
+cut=0
+tt = np.linspace(0,70,1000)
+
 
 plt.figure('i0 vs ion yield')
 plt.title('i0 vs ion yield')
-plt.plot(i0[cut::],ion[cut::],'o',alpha=0.01)
+plt.plot(i0[cut::],ion[cut::],'o',alpha=0.04)
+plt.plot(tt,-0.31*tt+400.3,color='k',alpha = 0.5)
 plt.xlabel('i0 [uJ]')
 plt.ylabel('ion yield [a.u.]')
 
@@ -52,9 +54,11 @@ plt.xlabel('i0 [uJ]')
 plt.ylabel('electron yield [a.u.]')
 
 
-
 plt.figure(2)
-plt.hist2d(i0,elc,bins=100,range=[[5,max(i0)],[380,max(ion)]])
+plt.hist2d(i0,ion,bins=100,range=[[6,max(i0)],[370,max(ion)]],cmap ='Blues')
+plt.plot(tt,-0.31*tt+400.3,color='k',alpha = 0.5)
+plt.xlabel('i0 [uJ]')
+plt.ylabel('ion yield [a.u.]')
 
 plt.figure('ion yield vs delay')
 plt.title('ion yield vs delay')

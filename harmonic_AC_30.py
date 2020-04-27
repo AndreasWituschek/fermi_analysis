@@ -29,6 +29,23 @@ plt.rcParams['ytick.major.size'] = ticklength
 plt.rcParams['axes.linewidth'] = ticksize
 plt.rcParams['lines.linewidth'] = 1.5
 
+# =============================================================================
+# Choose saturation model by commenting/uncommenting
+# =============================================================================
+#BESSEL MODEL
+def hg(pulse,harmonic):
+    seedenvelope = np.abs(pulse)
+    seedphase = np.unwrap(np.angle(pulse))
+    return jv(harmonic,harmonic* seedenvelope)*np.exp(1j*seedphase*harmonic), pulse**harmonic
+
+#SIGMOID MODEL
+#def hg(pulse,harmonic):
+#    xmax = (1+np.sqrt(2/3)*harmonic**(-2/3))
+#    jmax = jv(harmonic,harmonic*xmax)
+#    f= np.sqrt(2)/xmax
+#    return np.real((f*pulse)**harmonic/(1+np.abs((f*pulse)**harmonic)))*jmax, pulse**harmonic
+#
+
 
 #fundamental seed pulse E field with unity amplitude (1H)
 # freq = frequency in Hz, fwhm = intensity fwhm
@@ -41,24 +58,6 @@ def pulse_steady(t,freq,cen,fwhm,chirp,amp,phase):
 def pulse_scanned(t,freq,cen,fwhm,chirp,amp,phase,freqshift):
     return amp*np.exp(-2*np.log(2)*(t-cen)**2/fwhm**2 + 1j*(2.*np.pi*(freq + cen*freqshift)*(t-cen)+phase) + 1j*chirp*cen*(t-cen)**2)
 
-#OLD SIGMPOID MODE DONT USE ANYMORE
-#def hg(pulse,harmonic):
-#    return np.real(pulse**harmonic/(1+np.abs(pulse**harmonic))), pulse**harmonic
-
-
-#BESSEL MODEL
-def hg(pulse,harmonic):
-    seedenvelope = np.abs(pulse)
-    seedphase = np.unwrap(np.angle(pulse))
-    return jv(harmonic,harmonic* seedenvelope)*np.exp(1j*seedphase*harmonic), pulse**harmonic
-
-#NEW SIGMOID MODEL
-#def hg(pulse,harmonic):
-#    xmax = (1+np.sqrt(2/3)*harmonic**(-2/3))
-#    jmax = jv(harmonic,harmonic*xmax)
-#    f= np.sqrt(2)/xmax
-#    return np.real((f*pulse)**harmonic/(1+np.abs((f*pulse)**harmonic)))*jmax, pulse**harmonic
-#
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
@@ -100,23 +99,25 @@ def idft_window_undersamp(dft_ac,cent,sigma,harm,points,order):
     daw_roll = np.append(np.append(daw_low_roll,daw_zero),daw_high_roll)
     return np.fft.fft(np.fft.ifftshift(daw_roll)), window
 #==============================================================================
-# 
+# choose which plots one wants:
 #==============================================================================
-
+    
 plot_ac = 0
 plot_efield = 0
 plot_components = 0
 plot_data_sim = 0
-plot_coherent_addup = 0
+plot_coherent_addup =0
 plot_hgfunction = 0
 plot_paper = 1
 
-#parameters
-t = np.linspace(-600,600,4000) #time variable for pulses (ca. 40000 is good to reslove fast oscillations)
+# =============================================================================
+# parameters
+# =============================================================================
+t = np.linspace(-600,600,4000) #time variable for pulses (ca. 40000 is good to reslove fast oscillations, however also 4000 works for a quick check, which gives almost the same results (fast oscillations are undersampled then))
 tau=np.linspace(-400,400,2**14) #delay range for autocorrelation
 
-amp = 0.83 #amplitude of seed field BESSEL
-#amp = 0.979 #amplitude of seed field SIGMOID
+amp = 0.83 #amplitude of single pulse seed field BESSEL
+#amp = 0.979 #amplitude of single pulse seed field SIGMOID
 
 freq = 1.1492 #[1/fs] seed laser frequency
 undersamp = 52.23 #undersampling factor. If 0, no undersampling will be applied
@@ -124,7 +125,6 @@ chirp = 0# -freq*0.000005 #chirp parameter
 phase = 0.0 #rad
 harm = 6 #order of the harmonic generation process
 fwhm = 98 #pulse intensity fwhm in fs
-#fwhm = 120
 freqshift =0# freq*0.00001 #frequency shift of the scanned pulse while scanning in Hz/fs
 
 
@@ -189,7 +189,7 @@ windows = windows.reshape((-1,int(len(windows)/len(harmonics)))).transpose()
 X = np.loadtxt('//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/ScansOverZero/scan_5234/X_vs_delay.txt').transpose()
 Y = np.loadtxt('//mpmnsh01.public.ads.uni-freiburg.de/mpmnsh01/user/Projekte/BMBF/FERMI/DataAnalysis/Beamtime2/ScansOverZero/scan_5234/Y_vs_delay.txt').transpose()
 Z = X + 1j*Y
-delay_min = -316.66025 #fs
+delay_min = -316.66025 #fs delay values from the dataset
 delay_max = 299.3396
 delay = np.linspace(delay_min,delay_max,len(X[1]))
 
@@ -346,7 +346,7 @@ if plot_paper:
 
      #normation on 1H non-saturated simulation
     ylim = [[-1.1,1.1],[-0.3,.3],[-0.4,0.4],[-0.11,0.11],[-0.12,0.12],[-0.025,0.025]] #for BESSEL
-    ylim = [[-1.1,1.1],[-0.3,.3],[-0.2,0.2],[-0.11,0.11],[-0.04,0.04],[-0.03,0.03]] #for SIGMOID
+#    ylim = [[-1.1,1.1],[-0.3,.3],[-0.2,0.2],[-0.11,0.11],[-0.04,0.04],[-0.03,0.03]] #for SIGMOID
     xlim =[-200,200]
 
     nrow = int(harm)
@@ -411,40 +411,6 @@ if plot_hgfunction:
     #plt.plot(xaxis, hg(xaxis,harm)[1],label='x^6')
     plt.legend()
         
-
-
-#==============================================================================
-# What happens to a sinusoidal signal when saturating it?
-#==============================================================================
-
-#def sinus(t,amp,freq,phase):
-#    return amp*np.exp(1j*(freq*t+phase))
-#
-#t = np.linspace(-10,10,200000)
-#freq = 1  
-#sin1 = sinus(t,.4,freq,0)
-#sin2 = sinus(t,.4,freq*1.11,0)
-#sin = sin1+sin2
-##sin = 2*pulse_chirp(t,freq,0,3,0)
-#
-#sin_sat5H, sin_5H = hg(sin,5.)
-##plotting the electric fields
-#plt.figure('Sinus Saturation')
-#plt.plot(t,sin_5H,alpha=0.7)
-#plt.plot(t,sin_sat5H,alpha=0.7)
-#
-#dft_sin_sat = np.fft.fftshift(np.fft.fft(sin_sat5H))
-#dft_sin_sat /= np.max(abs(dft_sin_sat))
-#dft_sin = np.fft.fftshift(np.fft.fft(sin_5H))
-#dft_sin /= np.max(abs(dft_sin))
-##dft_ac_sat_conv = np.fft.fftshift(np.fft.fft(ac_sat_conv))
-##dft_ac_sat_conv /= np.max(abs(dft_ac_sat_conv))
-#freqs_sin = np.fft.fftshift(np.fft.fftfreq(len(sin_sat5H),d=t[1]-t[0]))/(freq/(2.*np.pi))
-#
-#plt.figure('DFT sinus saturated')
-#plt.plot(freqs_sin,abs(dft_sin))
-#plt.plot(freqs_sin, abs(dft_sin_sat))
-#plt.xlim([-0.5,40])
 
 
 # =============================================================================

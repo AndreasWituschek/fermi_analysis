@@ -21,8 +21,8 @@ beamtime = 2
 delay_zero_pos = 11025.66
 mfli_name = ['dev3265', 'dev3269']  # number of MFLI demodulator to be analyzed
 
-runs = [4651, 5019]#693] #first and last run of a delay scan
-run_remove = [4964]#[5251,5272,5328]#[2981,1079,1080,1081,1078,1153,1161,1178,1205,1206]#[5251,5272,5328] # #[1248] [4964] #[226, 227, 292, 293, 294, 308] #[1385, 1387, 1413, 1420, 6052,6053,6054,6055,6056]# #[3991] #3874] #[3367, 3368,3471,3472,3486,3485,3605,3606,3607,3608,3609,3610,3611,3612,3613] #[2386,2504,2505,2506,2507,2508,2509,2510,2511,2529] #[1575,1576,1577] #[1153, 1161, 1178, 1205, 1206]
+runs = [5395,5396]#[5538,5539] #[5234, 5545]#693] #first and last run of a delay scan
+run_remove = [5251,5272,5328]#[4964][2981,1079,1080,1081,1078,1153,1161,1178,1205,1206]#[5251,5272,5328] # #[1248] [4964] #[226, 227, 292, 293, 294, 308] #[1385, 1387, 1413, 1420, 6052,6053,6054,6055,6056]# #[3991] #3874] #[3367, 3368,3471,3472,3486,3485,3605,3606,3607,3608,3609,3610,3611,3612,3613] #[2386,2504,2505,2506,2507,2508,2509,2510,2511,2529] #[1575,1576,1577] #[1153, 1161, 1178, 1205, 1206]
 run_missing_i0 = [3044] # runs that are missing iom_sh_a
 
 run_list = range(runs[0], runs[1] + 1)
@@ -40,8 +40,12 @@ transfer_ref = beamtime==2 # decides wether reference wavelenght is written into
 #elc_window = [7900,8450]
 
 #scan4651
-ion_window = [15600,16400]
-elc_window = [5900,6200]
+#ion_window = [15600,16400]
+#elc_window = [5900,6200]
+
+#scan5234
+ion_window = [8200,9200]
+elc_window = [6500,8500]
 
 """ File paths """
 # path where it saves the preanalysed data
@@ -52,7 +56,8 @@ analyse_path += 'scan_{:03}/'.format(runs[0])
 # path where the raw data is: 
 root_path = '//10.5.71.28/fermiserver/beamtime1/Day_3/'
 if beamtime==2:
-    root_path = '//10.5.71.28/fermiserver/beamtime2/'
+#    root_path = '//10.5.71.28/fermiserver/beamtime2/'
+    root_path = 'C:/Users/andreas/Documents/BMBF_local/FERMI_offline_data/'
 
 
 try:
@@ -115,8 +120,8 @@ for run in run_list:
             ldm_i0 = np.append(ldm_i0, np.array(ldm_file['/photon_diagnostics/FEL01/I0_monitor/iom_uh_a']))
         
 #        reading ion and electron spectrum from files:
-#        raw_ion = np.mean(np.array(ldm_file['/digitizer/channel1']),axis=0)
-#        raw_elc = np.mean(np.array(ldm_file['/digitizer/channel3']),axis=0)
+        raw_ion = np.mean(np.array(ldm_file['/digitizer/channel1']),axis=0)
+        raw_elc = np.mean(np.array(ldm_file['/digitizer/channel3']),axis=0)
         ldm_ion = np.append(ldm_ion, np.mean(np.array(ldm_file['/digitizer/channel1'])[::,ion_window[0]:ion_window[1]],axis=1))
         ldm_elc = np.append(ldm_elc, np.mean(np.array(ldm_file['/digitizer/channel3'])[::,elc_window[0]:elc_window[1]],axis=1))                
         
